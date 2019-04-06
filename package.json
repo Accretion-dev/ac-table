@@ -1,0 +1,16 @@
+{
+  "name": "ac-table",
+  "version": "0.0.1",
+  "description": "A json explorer. Side project of personal knowledge management system: Accretion.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "json",
+    "vue",
+    "table"
+  ],
+  "author": "Fmajor",
+  "license": "MIT"
+}

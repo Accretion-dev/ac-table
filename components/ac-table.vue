@@ -2,6 +2,8 @@
 <template>
   <div :class="prefixCls">
     <h1> ac-table </h1>
+    <p> ac-input here </p>
+    <ac-input />
   </div>
 </template>
 

@@ -1,1 +1,0 @@
-import facker from 'facker'

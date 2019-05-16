@@ -5,14 +5,16 @@
   "scripts": {
     "test": "vue-cli-service serve",
     "selenium-test": "nodemon --watch run-backend.js --exec 'babel-node --inspect run-backend.js --presets=env'",
-    "parser-ava": "nodemon --watch ./parser --exec 'babel-node --presets=env --inspect -- node_modules/ava/profile.js ./parser/test.js'",
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "free": "nodemon --watch free.js --exec 'babel-node --presets=env --inspect -- free.js'"
   },
   "dependencies": {
     "axios": "^0.18.0",
     "core-js": "^2.6.5",
+    "deepcopy": "^2.0.0",
+    "faker": "^4.1.0",
     "iview": "^3.3.3",
     "luxon": "^1.13.2",
     "vue": "^2.6.6",

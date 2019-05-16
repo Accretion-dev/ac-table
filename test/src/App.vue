@@ -9,11 +9,8 @@
       </test-block>
       <test-block title="Test simple input" name="simple" id="simple">
         <div>
-          <ac-input v-model="values[0]" placeholder="value"/>
+          <ac-table :data="data"/>
         </div>
-        <p>
-          <span> value: "{{values[0]}}" </span>
-        </p>
       </test-block>
     </test-env>
     <div style="height:1000px"> </div>
@@ -22,12 +19,15 @@
 
 <script>
 const {DateTime, Duration} = require('luxon')
+import data from '../data/999.json'
+import {analysisJson} from '../../components/tools'
 
 export default {
   name: 'app',
   data () {
     return {
       values:  [...Array(20).keys()].map(_ => ''),
+      data
     }
   },
   computed: {
@@ -35,6 +35,8 @@ export default {
   methods: {
   },
   created () {
+    let result = analysisJson(data)
+    console.log(result)
   }
 }
 </script>

@@ -4,10 +4,10 @@
 </template>
 
 <script>
-const prefixCls = 'ac-tree-item'
+const prefixCls = 'ac-table-tree-item'
 
 export default {
-  name: 'ac-tree-item',
+  name: 'ac-table-tree-item',
   props: {
     tree: { type: Object, default () { return [] } }
   },
@@ -25,7 +25,7 @@ export default {
 </script>
 
 <style lang="scss">
-$pre: ac-tree-item;
+$pre: ac-table-tree-item;
 .#{$pre} {
   position: relative;
   display: flex;

@@ -5,11 +5,11 @@
 </template>
 
 <script>
-const prefixCls = 'ac-tree'
+const prefixCls = 'ac-table-tree'
 import acTreeItem from './ac-tree-item'
 
 export default {
-  name: 'ac-tree',
+  name: 'ac-table-tree',
   components: {acTreeItem},
   props: {
     tree: { type: Object, default () { return {} } }
@@ -25,7 +25,7 @@ export default {
 </script>
 
 <style lang="scss">
-$pre: ac-tree;
+$pre: ac-table-tree;
 .#{$pre} {
   background: #76bcf9;
 }

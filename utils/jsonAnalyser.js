@@ -248,10 +248,12 @@ class JsonAnalyser {
       }
     }
   }
-  _getValueByPath (data, paths, arrayDot, debug) {
+  _getValueByPath (data, paths, arrayDepth, debug) {
     if (debug) {
-      console.log('paths:', JSON.stringify(paths), data, {arrayDot})
-      debugger
+      console.log('paths:', JSON.stringify(paths), data, {arrayDepth})
+      if (typeof(debug)==='function'&&debug(data, paths, arrayDepth)) {
+        debugger
+      }
     }
     if (paths.length === 0) return data
     let [head, ...tail] = paths
@@ -267,7 +269,6 @@ class JsonAnalyser {
         if (thistype !== 'array') {
           return undefined
         } else {
-          result = data.map(_ => this._getValueByPath(_, tail, true, debug))
           let __ = tail.filter(_ => _!=='@object')
           let nextDotPos = tail.findIndex(_ => !_.startsWith(this.typeDelimiter))
           let nextArrays
@@ -276,6 +277,7 @@ class JsonAnalyser {
           } else {
             nextArrays = tail.slice(0,nextDotPos).filter(_ => _==='@inner')
           }
+          result = data.map(_ => this._getValueByPath(_, tail, arrayDepth+1, debug))
           if (!(// conditions that do not need to flatten
               !nextArrays.length && (
                 __.length===0 || // return directly
@@ -294,7 +296,7 @@ class JsonAnalyser {
         }
       } else if (goodTypes.includes(type)){
         if (thistype === type) {
-          result = this._getValueByPath(data, tail, false, debug)
+          result = this._getValueByPath(data, tail, arrayDepth, debug)
           return result
         } else {
           return undefined
@@ -309,46 +311,26 @@ class JsonAnalyser {
       if (subdata === undefined) {
         return undefined
       } else {
-        return this._getValueByPath(subdata, tail, false, debug)
+        return this._getValueByPath(subdata, tail, 0, debug)
       }
     } else if (thistype === 'array') { // only good for nested object in array
-      if (arrayDot) return undefined // array.next only alown [{}] not [[{}]]
-      if (paths.length>2 || paths.length===2 && !goodTypeFlags.includes(paths[1])) {
-        let result = data.map(_ => this._getValueByPath(_, paths, true, debug))
+      if (arrayDepth) return undefined
+      data = data.filter(_ => typeof(_)==='object'&&!Array.isArray(_)&&_!==null)
+      result = data.map(_ => this._getValueByPath(_, paths, 0, debug))
+      if (
+        paths.length === 1 || // ......field
+        paths.length === 2 && !fgoodTypeFlags.includes(paths[0]) && goodTypeFlags.includes(paths[1]) // ....field@type
+      ) {
+        result = result.filter(_ => _!==undefined)
+        result = [result]
+      } else {
         result = _.flatten(result)
         result = result.filter(_ => _!==undefined)
-        if (result.length) {
-          return result
-        } else {
-          return undefined
-        }
+      }
+      if (result.length) {
+        return result
       } else {
-        // paths.length===1: (.A).subfield
-        // paths.length===2: (.A).subfield@type
-        let lastpath = paths[0]
-        let lasttype = paths[1]
-        let result = data.map(_ => {
-          if (!Array.isArray(_) && _!==null && typeof(_) === 'object' && lastpath in _) {
-            let output = _[lastpath]
-            if (lasttype) {
-              if (lasttype === '@'+this.getType(output)) {
-                return output
-              } else {
-                return undefined
-              }
-            } else {
-              return output
-            }
-          } else {
-            return undefined
-          }
-        })
-        result = result.filter(_ => _!==undefined)
-        if (result.length) {
-          return result
-        } else {
-          return undefined
-        }
+        return undefined
       }
     } else {
       return undefined
@@ -376,9 +358,9 @@ class JsonAnalyser {
       //console.log({path, newpaths})
       //if (path === 'aSNDAO.aS@array') debugger
       if (Array.isArray(data)) {
-        return data.map(_ => this._getValueByPath(_, newpaths, false, debug))
+        return data.map(_ => this._getValueByPath(_, newpaths, 0, debug))
       } else {
-        return this._getValueByPath(data, newpaths, false, debug)
+        return this._getValueByPath(data, newpaths, 0, debug)
       }
     } else if (Array.isArray(path)) {
       let map = { }

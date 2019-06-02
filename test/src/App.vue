@@ -19,8 +19,8 @@
 
 <script>
 const {DateTime, Duration} = require('luxon')
-import data from '../data/999.json'
-import {analysisJson} from '../../components/tools'
+import data from '../data/999_2.json'
+import {JsonAnalyser} from '../../utils/jsonAnalyser.js'
 
 export default {
   name: 'app',
@@ -35,8 +35,6 @@ export default {
   methods: {
   },
   created () {
-    let result = analysisJson(data)
-    console.log(result)
   }
 }
 </script>

@@ -15,3 +15,8 @@ gen:
 link:
 	npm link vue-selenium-unittest
 	npm link mongodb-simple-query-syntax
+	npm link ac-input
+ava:
+	npm run ava
+ava2:
+	npm run ava2

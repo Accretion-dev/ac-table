@@ -94,6 +94,21 @@ let struct0 = {
     aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
     aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
     aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+    aO: {
+      count: [0,3],
+      array: true,
+      fields: {
+        title: ['random.words', 3, 10],
+        name: rString,
+        int: rNumber,
+        value: 'float',
+        date: rDate,
+        aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+        aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+        aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+      }
+    },
+    aSND: { missing: 0.1, count: [0,5], array: true, types:[rString, rNumber, rDate, 'float']},
     SND: {missing: 0.5, types:[
       rString,
       rNumber,
@@ -133,6 +148,690 @@ let struct0 = {
          }
        }
     ]},
+    aSNDAO: {missing: 0.5, count: [0,3], array: true, types:[
+      rString,
+      rNumber,
+      rDate,
+      'float',
+       {
+         count: [0,3],
+         array: true,
+         fields: {
+           title: ['random.words', 3, 10],
+           name: rString,
+           int: rNumber,
+           value: 'float',
+           date: rDate,
+           aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+           aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+           aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+         }
+       },
+       {
+         array: false,
+         fields: {
+           title: ['random.words', 3, 10],
+           name: rString,
+           int: rNumber,
+           value: 'float',
+           date: rDate,
+           aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+           aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+           aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+         }
+       }
+    ]},
+    SNDAMO: {missing: 0.5, types:[
+      rString,
+      rNumber,
+      rDate,
+      'float',
+       {
+         count: [0,3],
+         array: true,
+         missing: 0.1,
+         types:[
+           rString,
+           rNumber,
+           rDate,
+           'float',
+           {
+             count: [0,3],
+             array: true,
+             fields: {
+               title: ['random.words', 3, 10],
+               name: rString,
+               int: rNumber,
+               value: 'float',
+               date: rDate,
+               aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+               aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+               aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+             }
+           },
+           {
+             array: false,
+             fields: {
+               title: ['random.words', 3, 10],
+               name: rString,
+               int: rNumber,
+               value: 'float',
+               date: rDate,
+               aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+               aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+               aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+             }
+           }
+         ],
+       },
+       {
+         array: false,
+         fields: {
+           title: ['random.words', 3, 10],
+           name: rString,
+           int: rNumber,
+           value: 'float',
+           date: rDate,
+           aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+           aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+           aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+         }
+       }
+    ]},
+    aaaO: {missing: 0.1, count: [0,3], array: true, types:[
+      {missing: 0.1, count: [0,3], array: true, types:[
+        {missing: 0.1, count: [0,3], array: false,
+           fields: {
+             title: ['random.words', 3, 10],
+             name: rString,
+             int: rNumber,
+             value: 'float',
+             date: rDate,
+             aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+             aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+             aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+           }
+        }
+      ]}
+    ]},
+    aSNDAMO: {missing: 0.5, count: [0,3], array: true, types:[
+      rString,
+      rNumber,
+      rDate,
+      'float',
+       {
+         count: [0,3],
+         array: true,
+         missing: 0.1,
+         types:[
+           rString,
+           rNumber,
+           rDate,
+           'float',
+           {
+             count: [0,3],
+             array: true,
+             fields: {
+               title: ['random.words', 3, 10],
+               name: rString,
+               int: rNumber,
+               value: 'float',
+               date: rDate,
+               aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+               aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+               aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+               aO: {
+                 count: [0,3],
+                 array: true,
+                 fields: {
+                   title: ['random.words', 3, 10],
+                   name: rString,
+                   int: rNumber,
+                   value: 'float',
+                   date: rDate,
+                   aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                   aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                   aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                 }
+               },
+             }
+           },
+           {
+             array: false,
+             fields: {
+               title: ['random.words', 3, 10],
+               name: rString,
+               int: rNumber,
+               value: 'float',
+               date: rDate,
+               aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+               aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+               aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+               aO: {
+                 count: [0,3],
+                 array: true,
+                 fields: {
+                   title: ['random.words', 3, 10],
+                   name: rString,
+                   int: rNumber,
+                   value: 'float',
+                   date: rDate,
+                   aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                   aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                   aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                 }
+               },
+             }
+           }
+         ],
+       },
+       {
+         array: false,
+         fields: {
+           title: ['random.words', 3, 10],
+           name: rString,
+           int: rNumber,
+           value: 'float',
+           date: rDate,
+           aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+           aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+           aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+         }
+       }
+    ]},
+    aSNDAMMO: {missing: 0.5, count: [0,3], array: true, types:[
+      rString,
+      rNumber,
+      rDate,
+      'float',
+       {
+         count: [0,3],
+         array: true,
+         missing: 0.1,
+         types:[
+           rString,
+           rNumber,
+           rDate,
+           'float',
+           {
+             count: [0,3],
+             array: true,
+             missing: 0.1,
+             types:[
+               rString,
+               rNumber,
+               rDate,
+               'float',
+               {
+                 count: [0,3],
+                 array: true,
+                 fields: {
+                   title: ['random.words', 3, 10],
+                   name: rString,
+                   int: rNumber,
+                   value: 'float',
+                   date: rDate,
+                   aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                   aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                   aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                   aO: {
+                     count: [0,3],
+                     array: true,
+                     fields: {
+                       title: ['random.words', 3, 10],
+                       name: rString,
+                       int: rNumber,
+                       value: 'float',
+                       date: rDate,
+                       aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                       aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                       aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                     }
+                   },
+                   aM: {missing: 0.5, types:[
+                     rString,
+                     rNumber,
+                     rDate,
+                     'float',
+                     {
+                       count: [0,3],
+                       array: true,
+                       missing: 0.1,
+                       types:[
+                         rString,
+                         rNumber,
+                         rDate,
+                         'float',
+                         {
+                           count: [0,3],
+                           array: true,
+                           fields: {
+                             title: ['random.words', 3, 10],
+                             name: rString,
+                             int: rNumber,
+                             value: 'float',
+                             date: rDate,
+                             aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                             aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                             aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                           }
+                         },
+                         {
+                           array: false,
+                           fields: {
+                             title: ['random.words', 3, 10],
+                             name: rString,
+                             int: rNumber,
+                             value: 'float',
+                             date: rDate,
+                             aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                             aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                             aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                           }
+                         }
+                       ],
+                     },
+                     {
+                       array: false,
+                       fields: {
+                         title: ['random.words', 3, 10],
+                         name: rString,
+                         int: rNumber,
+                         value: 'float',
+                         date: rDate,
+                         aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                         aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                         aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                       }
+                     }
+                   ]}
+                 }
+               },
+               {
+                 array: false,
+                 fields: {
+                   title: ['random.words', 3, 10],
+                   name: rString,
+                   int: rNumber,
+                   value: 'float',
+                   date: rDate,
+                   aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                   aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                   aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                   aO: {
+                     count: [0,3],
+                     array: true,
+                     fields: {
+                       title: ['random.words', 3, 10],
+                       name: rString,
+                       int: rNumber,
+                       value: 'float',
+                       date: rDate,
+                       aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                       aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                       aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                       aM: {missing: 0.5, types:[
+                         rString,
+                         rNumber,
+                         rDate,
+                         'float',
+                         {
+                           count: [0,3],
+                           array: true,
+                           missing: 0.1,
+                           types:[
+                             rString,
+                             rNumber,
+                             rDate,
+                             'float',
+                             {
+                               count: [0,3],
+                               array: true,
+                               fields: {
+                                 title: ['random.words', 3, 10],
+                                 name: rString,
+                                 int: rNumber,
+                                 value: 'float',
+                                 date: rDate,
+                                 aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                                 aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                                 aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                               }
+                             },
+                             {
+                               array: false,
+                               fields: {
+                                 title: ['random.words', 3, 10],
+                                 name: rString,
+                                 int: rNumber,
+                                 value: 'float',
+                                 date: rDate,
+                                 aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                                 aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                                 aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                               }
+                             }
+                           ],
+                         },
+                         {
+                           array: false,
+                           fields: {
+                             title: ['random.words', 3, 10],
+                             name: rString,
+                             int: rNumber,
+                             value: 'float',
+                             date: rDate,
+                             aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                             aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                             aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                           }
+                         }
+                       ]}
+                     }
+                   },
+                 }
+               }
+             ],
+           },
+           {
+             array: false,
+             fields: {
+               title: ['random.words', 3, 10],
+               name: rString,
+               int: rNumber,
+               value: 'float',
+               date: rDate,
+               aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+               aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+               aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+               aO: {
+                 count: [0,3],
+                 array: true,
+                 fields: {
+                   title: ['random.words', 3, 10],
+                   name: rString,
+                   int: rNumber,
+                   value: 'float',
+                   date: rDate,
+                   aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                   aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                   aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                   aO: {
+                     count: [0,3],
+                     array: true,
+                     fields: {
+                       title: ['random.words', 3, 10],
+                       name: rString,
+                       int: rNumber,
+                       value: 'float',
+                       date: rDate,
+                       aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                       aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                       aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                       aM: {missing: 0.5, types:[
+                         rString,
+                         rNumber,
+                         rDate,
+                         'float',
+                         {
+                           count: [0,3],
+                           array: true,
+                           missing: 0.1,
+                           types:[
+                             rString,
+                             rNumber,
+                             rDate,
+                             'float',
+                             {
+                               count: [0,3],
+                               array: true,
+                               fields: {
+                                 title: ['random.words', 3, 10],
+                                 name: rString,
+                                 int: rNumber,
+                                 value: 'float',
+                                 date: rDate,
+                                 aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                                 aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                                 aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                               }
+                             },
+                             {
+                               array: false,
+                               fields: {
+                                 title: ['random.words', 3, 10],
+                                 name: rString,
+                                 int: rNumber,
+                                 value: 'float',
+                                 date: rDate,
+                                 aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                                 aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                                 aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                               }
+                             }
+                           ],
+                         },
+                         {
+                           array: false,
+                           fields: {
+                             title: ['random.words', 3, 10],
+                             name: rString,
+                             int: rNumber,
+                             value: 'float',
+                             date: rDate,
+                             aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                             aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                             aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                           }
+                         }
+                       ]}
+                     }
+                   },
+                   aM: {missing: 0.5, types:[
+                     rString,
+                     rNumber,
+                     rDate,
+                     'float',
+                     {
+                       count: [0,3],
+                       array: true,
+                       missing: 0.1,
+                       types:[
+                         rString,
+                         rNumber,
+                         rDate,
+                         'float',
+                         {
+                           count: [0,3],
+                           array: true,
+                           fields: {
+                             title: ['random.words', 3, 10],
+                             name: rString,
+                             int: rNumber,
+                             value: 'float',
+                             date: rDate,
+                             aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                             aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                             aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                           }
+                         },
+                         {
+                           array: false,
+                           fields: {
+                             title: ['random.words', 3, 10],
+                             name: rString,
+                             int: rNumber,
+                             value: 'float',
+                             date: rDate,
+                             aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                             aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                             aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                           }
+                         }
+                       ],
+                     },
+                     {
+                       array: false,
+                       fields: {
+                         title: ['random.words', 3, 10],
+                         name: rString,
+                         int: rNumber,
+                         value: 'float',
+                         date: rDate,
+                         aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                         aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                         aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                       }
+                     }
+                   ]}
+                 }
+               },
+             }
+           }
+         ],
+       },
+       {
+         array: false,
+         fields: {
+           title: ['random.words', 3, 10],
+           name: rString,
+           int: rNumber,
+           value: 'float',
+           date: rDate,
+           aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+           aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+           aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+           aO: {
+             count: [0,3],
+             array: true,
+             fields: {
+               title: ['random.words', 3, 10],
+               name: rString,
+               int: rNumber,
+               value: 'float',
+               date: rDate,
+               aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+               aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+               aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+               aM: {missing: 0.5, types:[
+                 rString,
+                 rNumber,
+                 rDate,
+                 'float',
+                 {
+                   count: [0,3],
+                   array: true,
+                   missing: 0.1,
+                   types:[
+                     rString,
+                     rNumber,
+                     rDate,
+                     'float',
+                     {
+                       count: [0,3],
+                       array: true,
+                       fields: {
+                         title: ['random.words', 3, 10],
+                         name: rString,
+                         int: rNumber,
+                         value: 'float',
+                         date: rDate,
+                         aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                         aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                         aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                       }
+                     },
+                     {
+                       array: false,
+                       fields: {
+                         title: ['random.words', 3, 10],
+                         name: rString,
+                         int: rNumber,
+                         value: 'float',
+                         date: rDate,
+                         aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                         aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                         aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                       }
+                     }
+                   ],
+                 },
+                 {
+                   array: false,
+                   fields: {
+                     title: ['random.words', 3, 10],
+                     name: rString,
+                     int: rNumber,
+                     value: 'float',
+                     date: rDate,
+                     aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                     aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                     aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                   }
+                 }
+               ]}
+             }
+           },
+           aM: {missing: 0.5, types:[
+             rString,
+             rNumber,
+             rDate,
+             'float',
+             {
+               count: [0,3],
+               array: true,
+               missing: 0.1,
+               types:[
+                 rString,
+                 rNumber,
+                 rDate,
+                 'float',
+                 {
+                   count: [0,3],
+                   array: true,
+                   fields: {
+                     title: ['random.words', 3, 10],
+                     name: rString,
+                     int: rNumber,
+                     value: 'float',
+                     date: rDate,
+                     aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                     aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                     aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                   }
+                 },
+                 {
+                   array: false,
+                   fields: {
+                     title: ['random.words', 3, 10],
+                     name: rString,
+                     int: rNumber,
+                     value: 'float',
+                     date: rDate,
+                     aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                     aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                     aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+                   }
+                 }
+               ],
+             },
+             {
+               array: false,
+               fields: {
+                 title: ['random.words', 3, 10],
+                 name: rString,
+                 int: rNumber,
+                 value: 'float',
+                 date: rDate,
+                 aS: { missing: 0.1, count: [0,5], array: true, type: rString, },
+                 aN: { missing: 0.1, count: [0,5], array: true, type: rNumber, },
+                 aD: { missing: 0.1, count: [0,5], array: true, type: rDate, },
+               }
+             }
+           ]}
+         }
+       }
+    ]},
   }
 }
 let struct1 = JSON.parse(JSON.stringify(struct0))
@@ -147,6 +846,14 @@ struct1.fields.ao1 = {
 }
 struct1 = JSON.parse(JSON.stringify(struct1))
 
+let struct2 = JSON.parse(JSON.stringify(struct1))
+struct2.fields.ao2 = {
+  count: [0,3],
+  array: true,
+  fields: struct1.fields
+}
+struct2 = JSON.parse(JSON.stringify(struct2))
+
 function gen(N) {
   let result = []
   for (let i=0; i<N; i++) {
@@ -155,12 +862,33 @@ function gen(N) {
   }
   return result
 }
+function gen2(N) {
+  let result = []
+  for (let i=0; i<N; i++) {
+    let each = F(struct2)
+    result.push(each)
+  }
+  return result
+}
 
-let data = gen(999)
+let data = gen(3999)
+let data2 = gen2(3999)
 
 fs.writeFile(
-  __dirname + '/data/999.json',
+  __dirname + '/data/3999.json',
   JSON.stringify(data,null,2),
+  {flag: 'w'},
+  function (err) {
+   if(err) {
+    console.error(err);
+    } else {
+       console.log('write done');
+    }
+})
+
+fs.writeFile(
+  __dirname + '/data/3999_2.json',
+  JSON.stringify(data2,null,2),
   {flag: 'w'},
   function (err) {
    if(err) {

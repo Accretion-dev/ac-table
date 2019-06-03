@@ -244,10 +244,10 @@ class JsonAnalyser {
       }
     }
   }
-  _getValueByPath (data, paths, arrayDepth, dictOnly, debug) {
+  _getValueByPath (data, paths, arrayDepth, totalArrayDepth, dictOnly, flags, debug) {
     if (debug) {
-      console.log('paths:', JSON.stringify(paths), data, {arrayDepth,dictOnly})
-      if (typeof(debug)==='function'&&debug(data, paths, arrayDepth,dictOnly)) {
+      console.log('paths:', JSON.stringify(paths), data, {arrayDepth,dictOnly, flags})
+      if (typeof(debug)==='function'&&debug(data, paths, arrayDepth,dictOnly, flags)) {
         debugger
       }
     }
@@ -271,21 +271,27 @@ class JsonAnalyser {
             let nextArrays, mustBeArray
             if (nextDotPos===-1) {
               nextArrays = tail.filter(_ => _==='@inner')
-              mustBeArray = false
             } else {
               nextArrays = tail.slice(0,nextDotPos).filter(_ => _==='@inner')
-              let depthLG1 = tail.slice(nextDotPos).filter(_ => !goodTypeFlags.includes(_)).length>1
-              let haveInner = !!tail.slice(nextDotPos).find(_ => _==='@inner')
-              mustBeArray = depthLG1 || haveInner
             }
-            flattenDepth = nextArrays.length + mustBeArray
+            flattenDepth = nextArrays.length
+          }
+          if (tail.length && goodTypeFlags.includes(tail[0])) {
+            let type = tail[0].slice(1)
+            tail = tail.slice(1)
+            data = data.filter(_ => this.getType(_)===type)
           }
           if (tail.length && !fgoodTypeFlags.includes(tail[0])) {
             // if array of object, filter non objects
-            data = data.filter(_ => typeof(_)==='object'&&!Array.isArray(_)&&_!==null)
+            result = this._getValueByPath(data, tail, 0, totalArrayDepth, false, flags, debug)
+            if (result === undefined) {
+              return undefined
+            }
+          } else {
+            result = data.map(_ => this._getValueByPath(_, tail, arrayDepth+1, totalArrayDepth+1, false, flags, debug))
           }
-          result = data.map(_ => this._getValueByPath(_, tail, arrayDepth+1, false, debug))
           if (flattenDepth) {
+            //if (flags.expand&&totalArrayDepth===0) { flattenDepth += 1 }
             result = _.flattenDepth(result, flattenDepth)
           }
           result = result.filter(_ => _!==undefined)
@@ -297,7 +303,7 @@ class JsonAnalyser {
         }
       } else if (goodTypes.includes(type)){
         if (thistype === type) {
-          result = this._getValueByPath(data, tail, arrayDepth, false, debug)
+          result = this._getValueByPath(data, tail, arrayDepth, totalArrayDepth, false, flags, debug)
           return result
         } else {
           return undefined
@@ -312,30 +318,43 @@ class JsonAnalyser {
       if (subdata === undefined) {
         return undefined
       } else {
-        result = this._getValueByPath(subdata, tail, 0, false, debug)
+        result = this._getValueByPath(subdata, tail, 0, totalArrayDepth, false, flags, debug)
         return result
       }
     } else if (thistype === 'array') { // only good for nested object in array
       if (dictOnly) return undefined
       data = data.filter(_ => typeof(_)==='object'&&!Array.isArray(_)&&_!==null)
       let __ = data.map(_ => ({
-        value: this._getValueByPath(_, paths, 0, true, debug),
+        value: this._getValueByPath(_, paths, 0, totalArrayDepth+1, true, flags, debug),
         type: this.getType(_[paths[0]]),
       }))
       let deep = tail.filter(_ => !goodTypeFlags.includes(_)).length
-      let mustBeArray = !!tail.find(_ => _==='@inner')
+      let haveInner = !!tail.find(_ => _==='@inner')
       result = []
+      let expand = 0
       for (let each of __) {
         if (deep>0) {
-          if ((each.type === 'array' || mustBeArray || deep>1) && each.value && Array.isArray(each.value)) {
+          if (each.type === 'array' && each.value && Array.isArray(each.value)) {
             result = [...result, ...each.value]
           } else {
             result.push(each.value)
           }
-        } else {
-          result.push(each.value)
+        } else { // last field
+          if (each.type==='array') {
+            if (haveInner) {
+              expand += 1
+              result = [...result, ...each.value]
+            } else {
+              expand -= 1
+              result.push(each.value)
+            }
+          } else {
+            expand += 1
+            result.push(each.value)
+          }
         }
       }
+      if (haveInner || expand > 0) { flags.expand = true }
       result = result.filter(_ => _!==undefined)
       if (result.length) {
         return result
@@ -368,9 +387,9 @@ class JsonAnalyser {
       //console.log({path, newpaths})
       //if (path === 'aSNDAO.aS@array') debugger
       if (Array.isArray(data)) {
-        return data.map(_ => this._getValueByPath(_, newpaths, 0, 0,debug))
+        return data.map(_ => this._getValueByPath(_, newpaths, 0, 0, false, {}, debug))
       } else {
-        return this._getValueByPath(data, newpaths, 0, 0,debug)
+        return this._getValueByPath(data, newpaths, 0, 0, false, {}, debug)
       }
     } else if (Array.isArray(path)) {
       let map = { }

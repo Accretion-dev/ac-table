@@ -274,7 +274,9 @@ class JsonAnalyser {
               mustBeArray = false
             } else {
               nextArrays = tail.slice(0,nextDotPos).filter(_ => _==='@inner')
-              mustBeArray = !!tail.slice(nextDotPos).find(_ => _==='@inner')
+              let depthLG1 = tail.slice(nextDotPos).filter(_ => !goodTypeFlags.includes(_)).length>1
+              let haveInner = !!tail.slice(nextDotPos).find(_ => _==='@inner')
+              mustBeArray = depthLG1 || haveInner
             }
             flattenDepth = nextArrays.length + mustBeArray
           }
@@ -320,12 +322,12 @@ class JsonAnalyser {
         value: this._getValueByPath(_, paths, 0, true, debug),
         type: this.getType(_[paths[0]]),
       }))
-      let deep = tail.find(_ => !goodTypeFlags.includes(_))
-      let mustBeArray = tail.find(_ => _==='@inner')
+      let deep = tail.filter(_ => !goodTypeFlags.includes(_)).length
+      let mustBeArray = !!tail.find(_ => _==='@inner')
       result = []
       for (let each of __) {
-        if (deep!==undefined) {
-          if (each.type === 'array' || mustBeArray && each.value) {
+        if (deep>0) {
+          if ((each.type === 'array' || mustBeArray || deep>1) && each.value && Array.isArray(each.value)) {
             result = [...result, ...each.value]
           } else {
             result.push(each.value)

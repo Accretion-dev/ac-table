@@ -9,7 +9,7 @@
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
     "free": "nodemon --watch free.js --exec 'babel-node --presets=env --inspect -- free.js'",
-    "ava": "nodemon --watch ava.js --watch '../**/*.js' --exec 'babel-node --presets=env --inspect -- node_modules/ava/profile.js ava.js'",
+    "ava": "export NODE_OPTIONS=--max_old_space_size=4096;nodemon --watch ava.js --watch '../**/*.js' --exec 'babel-node --presets=env --inspect -- node_modules/ava/profile.js ava.js'",
     "ava2": "nodemon --watch ava.js --watch '../**/*.js' --exec 'babel-node --presets=env --inspect=9230 -- node_modules/ava/profile.js ava.js'"
   },
   "dependencies": {

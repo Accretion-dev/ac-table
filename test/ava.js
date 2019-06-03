@@ -74,17 +74,6 @@ function clone(item) {
 }
 
 function makeNestedJson(level, config) {
-  if (!config) {
-    config = {
-      A_string: 1,
-      A_number: 1,
-      A_date: 1,
-      A_null: 1,
-      A_array: 3,
-      A_object: 3,
-      A_array_depth: 2,
-    }
-  }
   let result = {}
   let temp
   result.S = `s_root_${level}`
@@ -108,16 +97,26 @@ function makeNestedJson(level, config) {
 }
 
 function doTest(object, prefix, vglobal) {
+  const debugList = {
+    //'A.O.A>': (data, paths, arrayDepth) => paths.length === 3 && Array.isArray(data),
+    //'A>>.A>': (data, paths, arrayDepth) => paths.length === 2,
+    //'A>>': (data, paths, arrayDepth) => paths.length === 2,
+  }
   let type = typeof(object)
   if (type === 'object') {
     for (let name of Object.keys(object)) {
       doTest(object[name], `${prefix}${name}`, vglobal)
     }
   } else if (type === 'function') {
-    let {t, example, analyser} = vglobal
+    let {t, example, analyser, get, dget} = vglobal
     let func = object
     let path = prefix
-    let value = analyser.getValueByPath(example, path)
+    let value
+    if (Object.keys(debugList).includes(path)) {
+      value = analyser.getValueByPath(example, path, debugList[path])
+    } else {
+      value = analyser.getValueByPath(example, path)
+    }
     let good
     try {
       good = func(value)
@@ -126,6 +125,9 @@ function doTest(object, prefix, vglobal) {
     if (!good) {
       vglobal.anybad = true
       console.log('bad path:', path, value)
+      debugger
+    } else {
+      console.log('good path:', path)
     }
   }
 }
@@ -139,8 +141,18 @@ function arrayize(object, prefix) {
     }
     return result
   } else if (type === 'function') {
-    return _ => _.every(__ = object(__))
+    if (object === isUndefined) {
+      return isUndefined
+    } else {
+      return _ => _.every(__ => object(__))
+    }
   }
+}
+function isUndefined(_) {
+  return _ === undefined
+}
+function isNull(_) {
+  return _ === null
 }
 
 test('test single json explore syntax', t => {
@@ -150,8 +162,8 @@ test('test single json explore syntax', t => {
     A_number: 1,
     A_date: 1,
     A_null: 1,
-    A_array: 3,
-    A_object: 3,
+    A_array: 2,
+    A_object: 2,
     A_array_depth: 2,
   }
   let array_length = configs.A_string + configs.A_number + configs.A_date + configs.A_null + configs.A_array + configs.A_object
@@ -160,94 +172,114 @@ test('test single json explore syntax', t => {
     example = JSON.parse(str)
     console.log('use old example')
   } catch (e) {
-    let example = makeNestedJson(3, configs)
+    example = makeNestedJson(4, configs)
     fs.writeFileSync('./data/example.json', JSON.stringify(example))
     console.log('gen new example')
   }
   let analyser = new JsonAnalyser()
-  let simpleTests = {
+  let get = _ => analyser.getValueByPath(example,_)
+  let dget = _ => analyser.getValueByPath(example,_,true)
+  let simpleTests, arraySimpleTest, arrayOfObjectTest, arrayTests, objectTests, arrayObjectTest
+
+  simpleTests = {
     'S': {
       '': _ => _.startsWith('s_root'),
       '@string': _ => _.startsWith('s_root'),
-      '@number': _ => _===undefined,
-      '@date': _ => _===undefined,
-      '@array': _ => _===undefined,
-      '@object': _ => _===undefined,
-      '@null': _ => _===undefined,
-      '>': _ => _===undefined,
-      '.nonExist': _ => _===undefined,
+      '@number': isUndefined,
+      '@date': isUndefined,
+      '@array': isUndefined,
+      '@object': isUndefined,
+      '@null': isUndefined,
+      '>': isUndefined,
+      '.nonExist': isUndefined,
     },
     'N': {
       '': _ => typeof(_) === 'number',
-      '@string': _ => _===undefined,
+      '@string': isUndefined,
       '@number': _ => typeof(_) === 'number',
-      '@date': _ => _===undefined,
-      '@array': _ => _===undefined,
-      '@object': _ => _===undefined,
-      '@null': _ => _===undefined,
-      '>': _ => _===undefined,
-      '.nonExist': _ => _===undefined,
+      '@date': isUndefined,
+      '@array': isUndefined,
+      '@object': isUndefined,
+      '@null': isUndefined,
+      '>': isUndefined,
+      '.nonExist': isUndefined,
     },
     'D': {
       '': _ => typeof(_) === 'string' && _.includes('T'),
-      '@string': _ => _===undefined,
-      '@number': _ => _===undefined,
+      '@string': isUndefined,
+      '@number': isUndefined,
       '@date': _ => typeof(_) === 'string' && _.includes('T'),
-      '@array': _ => _===undefined,
-      '@object': _ => _===undefined,
-      '@null': _ => _===undefined,
-      '>': _ => _===undefined,
-      '.nonExist': _ => _===undefined,
+      '@array': isUndefined,
+      '@object': isUndefined,
+      '@null': isUndefined,
+      '>': isUndefined,
+      '.nonExist': isUndefined,
     },
     'null': {
       '': _ => _ === null,
-      '@string': _ => _===undefined,
-      '@number': _ => _===undefined,
-      '@date': _ => _===undefined,
-      '@array': _ => _===undefined,
-      '@object': _ => _===undefined,
+      '@string': isUndefined,
+      '@number': isUndefined,
+      '@date': isUndefined,
+      '@array': isUndefined,
+      '@object': isUndefined,
       '@null': _ => _=== null,
-      '>': _ => _===undefined,
-      '.nonExist': _ => _===undefined,
+      '>': isUndefined,
+      '.nonExist': isUndefined,
     },
   }
-  let arraySimpleTest = arrayize(simpleTests, '')
+  arraySimpleTest = arrayize(simpleTests, '')
 
-  let arrayTests = {
-    '': _ => Array.isArray(_) && _.length === array_length,
-    '@string': _ => _===undefined,
-    '@number': _ => _===undefined,
-    '@date': _ => _===undefined,
-    '@array': _ => Array.isArray(_),
-    '@object': _ => _===undefined,
-    '@null': _ => _===undefined,
-    '>': _ => Array.isArray(_) && _.length === array_length,
-    '.nonExist': _ => _===undefined,
-    '>@string': _ => Array.isArray(_) && _.length === configs.A_string,
-    '>@number': _ => Array.isArray(_) && _.length === configs.A_number,
-    '>@date': _ => Array.isArray(_) && _.length === configs.A_date,
-    '>@null': _ => Array.isArray(_) && _.length === configs.A_null,
-    '>@array': _ => Array.isArray(_) && _.length === configs.A_array,
-      /*
-    '>@object': {
-      '': _ => Array.isArray(_) && _.length === configs.A_object,
-      '.': {
-        ...simpleTests,
-      }
+  arrayOfObjectTest = {
+    '.': {
+      ...arraySimpleTest,
     }
-      */
   }
-  let objectTests = {
+  arrayTests = {
+    '': {
+      '': _ => Array.isArray(_) && _.length === array_length,
+      ...arrayOfObjectTest,
+    },
+    '@string': isUndefined,
+    '@number': isUndefined,
+    '@date': isUndefined,
+    '@array': _ => Array.isArray(_),
+    '@object': isUndefined,
+    '@null': isUndefined,
+    '.nonExist': isUndefined,
+    '>': {
+      '': _ => Array.isArray(_) && _.length === array_length,
+      '@string': _ => Array.isArray(_) && _.length === configs.A_string,
+      '@number': _ => Array.isArray(_) && _.length === configs.A_number,
+      '@date': _ => Array.isArray(_) && _.length === configs.A_date,
+      '@null': _ => Array.isArray(_) && _.length === configs.A_null,
+      '@array': {
+        '': _ => Array.isArray(_) && _.length === configs.A_array,
+        '>': {
+          '': Array.isArray(_) && _.length === array_length + 1*configs.A_array,
+          '@string': _ => Array.isArray(_) && _.length === configs.A_string*configs.A_array,
+          '@number': _ => Array.isArray(_) && _.length === configs.A_number*configs.A_array,
+          '@date': _ => Array.isArray(_) && _.length === configs.A_date*configs.A_array,
+          '@null': _ => Array.isArray(_) && _.length === configs.A_null*configs.A_array,
+        }
+      },
+      '@object': {
+        '': _ => Array.isArray(_) && _.length === configs.A_object,
+        ...arrayOfObjectTest,
+      },
+      ...arrayOfObjectTest,
+    },
+  }
+  objectTests = {
     '': {
       '': _ => typeof(_) === 'object',
-      '@string': _ => _===undefined,
-      '@number': _ => _===undefined,
-      '@date': _ => _===undefined,
-      '@array': _ => _===undefined,
+      '@string': isUndefined,
+      '@number': isUndefined,
+      '@date': isUndefined,
+      '@array': isUndefined,
       '@object': _ => typeof(_) === 'object',
-      '@null': _ => _===undefined,
-      '>': _ => _===undefined,
-      '.nonExist': _ => _===undefined,
+      '@null': isUndefined,
+      '>': isUndefined,
+      '.nonExist': isUndefined,
     },
     ".S": simpleTests.S,
     ".N": simpleTests.N,
@@ -256,9 +288,58 @@ test('test single json explore syntax', t => {
     ".A": arrayTests,
   }
   objectTests['.O'] = clone(objectTests)
+  arrayObjectTest = arrayize(objectTests, '')
+  // second order
+  arrayOfObjectTest = {
+    '.': {
+      ...arraySimpleTest,
+    },
+    '.O': {
+      ...arrayObjectTest
+    }
+  }
+  arrayTests = {
+    //'.O.A>':  _ => true,
+    '>>.A>': _ => true,
+    //'>>': _ => true,
+    '': {
+      '': _ => Array.isArray(_) && _.length === array_length,
+      ...arrayOfObjectTest,
+    },
+    '@string': isUndefined,
+    '@number': isUndefined,
+    '@date': isUndefined,
+    '@array': _ => Array.isArray(_),
+    '@object': isUndefined,
+    '@null': isUndefined,
+    '.nonExist': isUndefined,
+    '>': {
+      '': _ => Array.isArray(_) && _.length === array_length,
+      '@string': _ => Array.isArray(_) && _.length === configs.A_string,
+      '@number': _ => Array.isArray(_) && _.length === configs.A_number,
+      '@date': _ => Array.isArray(_) && _.length === configs.A_date,
+      '@null': _ => Array.isArray(_) && _.length === configs.A_null,
+      '@array': {
+        '': _ => Array.isArray(_) && _.length === configs.A_array,
+        '>': {
+          '': Array.isArray(_) && _.length === array_length + 1*configs.A_array,
+          '@string': _ => Array.isArray(_) && _.length === configs.A_string*configs.A_array,
+          '@number': _ => Array.isArray(_) && _.length === configs.A_number*configs.A_array,
+          '@date': _ => Array.isArray(_) && _.length === configs.A_date*configs.A_array,
+          '@null': _ => Array.isArray(_) && _.length === configs.A_null*configs.A_array,
+        }
+      },
+      '@object': {
+        '': _ => Array.isArray(_) && _.length === configs.A_object,
+        ...arrayOfObjectTest,
+      },
+      ...arrayOfObjectTest,
+    },
+  }
+
   let anybad = false
   console.log('example:', example)
-  let vglobal = {t, example, analyser, anybad: false}
+  let vglobal = {t, example, analyser, anybad: false, get, dget}
   doTest(simpleTests, '', vglobal)
   doTest(arrayTests, 'A', vglobal)
   doTest(objectTests, 'O', vglobal)

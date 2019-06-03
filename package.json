@@ -14,7 +14,8 @@
   "author": "Fmajor",
   "license": "MIT",
   "dependencies": {
-    "ac-input": "*"
+    "ac-input": "*",
+    "babel-preset-env": "^1.7.0"
   },
   "devDependencies": {
     "node-sass": "^4.11.0",

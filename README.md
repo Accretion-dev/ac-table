@@ -20,7 +20,17 @@ we define a `json extract syntax(JES)` to quickly extract deep fields of a rando
 * examples:
   * `field`: extract the `field` field of current data
   * `@type`: extract the field of current data only if its type is `type`, or will return undefined
-  * `>`: if current data is array, go into the array(flatten the array), or will return undefined
+  * `>`: the 'go into' operator for array
+    * '.a' return the array 'a'
+    * if '.a' is a root field
+      * '.a>' return a array than contains all values in 'a' (its value is the same as '.a', but have different meaning, e.g., '.a@array' and '.a>@array' have different meaning). return undefined if 'a' is a empty array or 'a' is not an array
+      * '.a>>' flatten the arrays in '.a' once
+      * '.a>>>' flatten the arrays in '.a' twice
+      * ....
+    * if '.a' is not a root field
+      * '.a>' flatten the arrays in '.a' once
+      * '.a>>' flatten the arrays in '.a' twice
+      * ....
   * `.subfield`
     * if current data is an object, extract the `subfield`
     * if current data is an array: map its values as below, if not return undefined

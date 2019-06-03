@@ -14,12 +14,6 @@ function haveNull(array) {
     return array.findIndex(_ => haveNull(_)) > -1
   }
 }
-function levelLength(path) {
-  // O.A: 10
-  // A: 10
-  // A.O.A: 30
-
-}
 
 class JsonAnalyser {
   constructor({typeDelimiter, struct, tree, arrayDelimiter} = {}) {

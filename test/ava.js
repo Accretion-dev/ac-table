@@ -16,7 +16,6 @@ function range(N) { // there is an unknown bug, i can not use the [...Array.keys
   }
   return n
 }
-
 /*
   function clone(json) {
     return JSON.parse(JSON.stringify(json))
@@ -72,30 +71,42 @@ function clone(item) {
 
   return result;
 }
-
-function makeNestedJson(level, config) {
+function makeNestedJson(level, prefix, config) {
+  if (level===null) return makeNestedJson(config.maxLevel, prefix, config)
   let result = {}
   let temp
-  result.S = `s_root_${level}`
-  result.N = level * 10000
+  result.S = `${prefix?prefix+'.':''}S`
+  result.N = (config.maxLevel - level + 1)*1
   result.D = (new Date()).toISOString()
   result.null = null
   if (level > 0) {
-    result.O = makeNestedJson(level-1, config)
-    let AS = range(config.A_string).map(_ => `s_A_${_}`)
-    let AN = range(config.A_number).map(_ => level * 11000)
+    result.O = makeNestedJson(level-1, `${prefix?prefix+'.':''}O`,config)
+    let AS = range(config.A_string).map(_ => `${prefix?prefix+'.A':'A'}>string${_}`)
+    let AN = range(config.A_number).map(_ => (config.maxLevel - level + 1) * 10)
     let AD = range(config.A_date).map(_ => (new Date()).toISOString())
     let Anull = range(config.A_date).map(_ => null)
-    let AO = range(config.A_object).map(_ => makeNestedJson(level-1, config))
+    let AO = range(config.A_object).map(_ => makeNestedJson(level-1, `${prefix?prefix+'.A':'A'}>@obejct`, config))
     let AA0 = _.flatten([AS, AN, AD, Anull, clone(AO)])
     for (let depth of range(config.A_array_depth)) {
-      AA0 = _.flatten([clone(AA0), range(config.A_array).map(_ => clone(AA0))])
+      AA0 = _.flatten([
+        clone(AA0),
+        range(config.A_array).map(_ => JSON.parse(JSON.stringify(AA0,
+          (key, value) => {
+            if (typeof(value) === 'string' && value.startsWith(`${prefix?prefix+'.A':'A'}>`)) {
+              value = value.replace(`${prefix?prefix+'.A':'A'}>`, `${prefix?prefix+'.A':'A'}>>`)
+            }
+            if (typeof(value) === 'number') {
+              value = value*100
+            }
+            return value
+          }
+        )))
+      ])
     }
-    result.A = _.flatten([AS, AN, AD, Anull, AO, range(config.A_array).map(_ => clone(AA0))])
+    result.A = AA0
   }
   return result
 }
-
 function doTest(object, prefix, vglobal) {
   const debugList = {
     //'A.O.A>': (data, paths, arrayDepth) => paths.length === 3 && Array.isArray(data),
@@ -131,7 +142,6 @@ function doTest(object, prefix, vglobal) {
     }
   }
 }
-
 function arrayize(object, prefix) {
   let result = {}
   let type = typeof(object)
@@ -158,13 +168,14 @@ function isNull(_) {
 test('test single json explore syntax', t => {
   let example
   let configs = {
+    maxLevel: 4,
     A_string: 1,
     A_number: 1,
     A_date: 1,
     A_null: 1,
-    A_array: 2,
+    A_array: 1,
     A_object: 2,
-    A_array_depth: 2,
+    A_array_depth: 3,
   }
   let array_length = configs.A_string + configs.A_number + configs.A_date + configs.A_null + configs.A_array + configs.A_object
   try {
@@ -172,19 +183,20 @@ test('test single json explore syntax', t => {
     example = JSON.parse(str)
     console.log('use old example')
   } catch (e) {
-    example = makeNestedJson(4, configs)
-    fs.writeFileSync('./data/example.json', JSON.stringify(example))
+    example = makeNestedJson(null, '', configs)
+    let str = JSON.stringify(example)
+    fs.writeFileSync('./data/example.json', str)
     console.log('gen new example')
   }
   let analyser = new JsonAnalyser()
   let get = _ => analyser.getValueByPath(example,_)
   let dget = _ => analyser.getValueByPath(example,_,true)
-  let simpleTests, arraySimpleTest, arrayOfObjectTest, arrayTests, objectTests, arrayObjectTest
+  let simpleTests, arraySimpleTest, arrayOfObjectTest, arrayTests, objectTests, arrayObjectTest, complexTests
 
   simpleTests = {
     'S': {
-      '': _ => _.startsWith('s_root'),
-      '@string': _ => _.startsWith('s_root'),
+      '': _ => typeof(_) === 'string',
+      '@string': _ => typeof(_) === 'string',
       '@number': isUndefined,
       '@date': isUndefined,
       '@array': isUndefined,
@@ -226,48 +238,23 @@ test('test single json explore syntax', t => {
       '>': isUndefined,
       '.nonExist': isUndefined,
     },
+    'O': {
+      '': _ => typeof(_)==='object'&&!Array.isArray(_)&&_!==null,
+      '@string': isUndefined,
+      '@number': isUndefined,
+      '@date': isUndefined,
+      '@array': isUndefined,
+      '@object': _ => typeof(_)==='object'&&!Array.isArray(_)&&_!==null,
+      '@null': isUndefined,
+      '>': isUndefined,
+      '.nonExist': isUndefined,
+    },
   }
   arraySimpleTest = arrayize(simpleTests, '')
-
   arrayOfObjectTest = {
     '.': {
       ...arraySimpleTest,
     }
-  }
-  arrayTests = {
-    '': {
-      '': _ => Array.isArray(_) && _.length === array_length,
-      ...arrayOfObjectTest,
-    },
-    '@string': isUndefined,
-    '@number': isUndefined,
-    '@date': isUndefined,
-    '@array': _ => Array.isArray(_),
-    '@object': isUndefined,
-    '@null': isUndefined,
-    '.nonExist': isUndefined,
-    '>': {
-      '': _ => Array.isArray(_) && _.length === array_length,
-      '@string': _ => Array.isArray(_) && _.length === configs.A_string,
-      '@number': _ => Array.isArray(_) && _.length === configs.A_number,
-      '@date': _ => Array.isArray(_) && _.length === configs.A_date,
-      '@null': _ => Array.isArray(_) && _.length === configs.A_null,
-      '@array': {
-        '': _ => Array.isArray(_) && _.length === configs.A_array,
-        '>': {
-          '': Array.isArray(_) && _.length === array_length + 1*configs.A_array,
-          '@string': _ => Array.isArray(_) && _.length === configs.A_string*configs.A_array,
-          '@number': _ => Array.isArray(_) && _.length === configs.A_number*configs.A_array,
-          '@date': _ => Array.isArray(_) && _.length === configs.A_date*configs.A_array,
-          '@null': _ => Array.isArray(_) && _.length === configs.A_null*configs.A_array,
-        }
-      },
-      '@object': {
-        '': _ => Array.isArray(_) && _.length === configs.A_object,
-        ...arrayOfObjectTest,
-      },
-      ...arrayOfObjectTest,
-    },
   }
   objectTests = {
     '': {
@@ -285,11 +272,1032 @@ test('test single json explore syntax', t => {
     ".N": simpleTests.N,
     ".D": simpleTests.D,
     ".null": simpleTests.null,
-    ".A": arrayTests,
   }
   objectTests['.O'] = clone(objectTests)
+  let ns = configs.A_string
+  let nn = configs.A_number
+  let nd = configs.A_date
+  let nu = configs.A_null
+  let no = configs.A_object
+  let na = configs.A_array
+  let ad = configs.A_array_depth
+
+  let bl = ns+nn+nd+nu+no
+  complexTests = {
+    "A": {
+      '': {
+        '': _ => Array.isArray(_) && _.length === bl+ad,
+        '@string': isUndefined,
+        '@number': isUndefined,
+        '@date': isUndefined,
+        '@array': _ => Array.isArray(_) && _.length === bl+ad,
+        '@object': isUndefined,
+        '@null': isUndefined,
+        '.nonExist': isUndefined,
+      },
+      ".": { // length is length of >@object
+        'S': {
+          '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === no,
+          '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === no,
+          '@number': isUndefined,
+          '@date': isUndefined,
+          '@array': isUndefined,
+          '@object': isUndefined,
+          '@null': isUndefined,
+          '>': isUndefined,
+          '.nonExist': isUndefined,
+        },
+        'N': {
+          '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === no,
+          '@string': isUndefined,
+          '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === no,
+          '@date': isUndefined,
+          '@array': isUndefined,
+          '@object': isUndefined,
+          '@null': isUndefined,
+          '>': isUndefined,
+          '.nonExist': isUndefined,
+        },
+        'D': {
+          '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === no,
+          '@string': isUndefined,
+          '@number': isUndefined,
+          '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === no,
+          '@array': isUndefined,
+          '@object': isUndefined,
+          '@null': isUndefined,
+          '>': isUndefined,
+          '.nonExist': isUndefined,
+        },
+        'null': {
+          '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === no,
+          '@string': isUndefined,
+          '@number': isUndefined,
+          '@date': isUndefined,
+          '@array': isUndefined,
+          '@object': isUndefined,
+          '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === no,
+          '>': isUndefined,
+          '.nonExist': isUndefined,
+        },
+        'O': {
+          '': {
+            '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === no,
+            '@string': isUndefined,
+            '@number': isUndefined,
+            '@date': isUndefined,
+            '@array': isUndefined,
+            '@object': isUndefined,
+            '@object': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === no,
+            '@null': isUndefined,
+            '>': isUndefined,
+            '.nonExist': isUndefined,
+          },
+          '.': {
+            'S': {
+              '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === no,
+              '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === no,
+              '@number': isUndefined,
+              '@date': isUndefined,
+              '@array': isUndefined,
+              '@object': isUndefined,
+              '@null': isUndefined,
+              '>': isUndefined,
+              '.nonExist': isUndefined,
+            },
+            'N': {
+              '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === no,
+              '@string': isUndefined,
+              '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === no,
+              '@date': isUndefined,
+              '@array': isUndefined,
+              '@object': isUndefined,
+              '@null': isUndefined,
+              '>': isUndefined,
+              '.nonExist': isUndefined,
+            },
+            'D': {
+              '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === no,
+              '@string': isUndefined,
+              '@number': isUndefined,
+              '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === no,
+              '@array': isUndefined,
+              '@object': isUndefined,
+              '@null': isUndefined,
+              '>': isUndefined,
+              '.nonExist': isUndefined,
+            },
+            'null': {
+              '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === no,
+              '@string': isUndefined,
+              '@number': isUndefined,
+              '@date': isUndefined,
+              '@array': isUndefined,
+              '@object': isUndefined,
+              '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === no,
+              '>': isUndefined,
+              '.nonExist': isUndefined,
+            },
+            'O': {
+              '': {
+                '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === no,
+                '@string': isUndefined,
+                '@number': isUndefined,
+                '@date': isUndefined,
+                '@array': isUndefined,
+                '@object': isUndefined,
+                '@object': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === no,
+                '@null': isUndefined,
+                '>': isUndefined,
+                '.nonExist': isUndefined,
+              },
+              '.': {
+                'S': {
+                  '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === no,
+                  '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === no,
+                  '@number': isUndefined,
+                  '@date': isUndefined,
+                  '@array': isUndefined,
+                  '@object': isUndefined,
+                  '@null': isUndefined,
+                  '>': isUndefined,
+                  '.nonExist': isUndefined,
+                },
+                'N': {
+                  '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === no,
+                  '@string': isUndefined,
+                  '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === no,
+                  '@date': isUndefined,
+                  '@array': isUndefined,
+                  '@object': isUndefined,
+                  '@null': isUndefined,
+                  '>': isUndefined,
+                  '.nonExist': isUndefined,
+                },
+                'D': {
+                  '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === no,
+                  '@string': isUndefined,
+                  '@number': isUndefined,
+                  '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === no,
+                  '@array': isUndefined,
+                  '@object': isUndefined,
+                  '@null': isUndefined,
+                  '>': isUndefined,
+                  '.nonExist': isUndefined,
+                },
+                'null': {
+                  '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === no,
+                  '@string': isUndefined,
+                  '@number': isUndefined,
+                  '@date': isUndefined,
+                  '@array': isUndefined,
+                  '@object': isUndefined,
+                  '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === no,
+                  '>': isUndefined,
+                  '.nonExist': isUndefined,
+                },
+                'O': {
+                  '': {
+                    '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === no,
+                    '@string': isUndefined,
+                    '@number': isUndefined,
+                    '@date': isUndefined,
+                    '@array': isUndefined,
+                    '@object': isUndefined,
+                    '@object': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === no,
+                    '@null': isUndefined,
+                    '>': isUndefined,
+                    '.nonExist': isUndefined,
+                  },
+                  '.': {
+                    'S': {
+                      '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === no,
+                      '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === no,
+                      '@number': isUndefined,
+                      '@date': isUndefined,
+                      '@array': isUndefined,
+                      '@object': isUndefined,
+                      '@null': isUndefined,
+                      '>': isUndefined,
+                      '.nonExist': isUndefined,
+                    },
+                    'N': {
+                      '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === no,
+                      '@string': isUndefined,
+                      '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === no,
+                      '@date': isUndefined,
+                      '@array': isUndefined,
+                      '@object': isUndefined,
+                      '@null': isUndefined,
+                      '>': isUndefined,
+                      '.nonExist': isUndefined,
+                    },
+                    'D': {
+                      '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === no,
+                      '@string': isUndefined,
+                      '@number': isUndefined,
+                      '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === no,
+                      '@array': isUndefined,
+                      '@object': isUndefined,
+                      '@null': isUndefined,
+                      '>': isUndefined,
+                      '.nonExist': isUndefined,
+                    },
+                    'null': {
+                      '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === no,
+                      '@string': isUndefined,
+                      '@number': isUndefined,
+                      '@date': isUndefined,
+                      '@array': isUndefined,
+                      '@object': isUndefined,
+                      '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === no,
+                      '>': isUndefined,
+                      '.nonExist': isUndefined,
+                    },
+                    'O': { '': isUndefined },
+                  }
+                },
+              }
+            },
+          }
+        },
+      },
+      '>': {
+        '': {
+          '': _ => Array.isArray(_) && _.length === bl+3, // 9
+          '@string': _ => Array.isArray(_) && _.length === ns,
+          '@number': _ => Array.isArray(_) && _.length === nn,
+          '@date': _ => Array.isArray(_) && _.length === nd,
+          '@null': _ => Array.isArray(_) && _.length === nu,
+          '@array': { // root length
+            '': _ => Array.isArray(_) && _.length === ad, //3
+            '>': { }
+          },
+          '@object': { // root length
+            '': _ => Array.isArray(_) && _.length === no, //2
+            '.': { },
+          },
+        },
+        ".": { },
+        '>': {
+          '': {
+            '': Array.isArray(_) && _.length === (2*bl+ad-1)*ad/2, // 21
+            '@string': _ => Array.isArray(_) && _.length === ns*ad,
+            '@number': _ => Array.isArray(_) && _.length === nn*ad,
+            '@date': _ => Array.isArray(_) && _.length === nd*ad,
+            '@null': _ => Array.isArray(_) && _.length === nu*ad,
+            '@array': { // count length
+              '': _ => Array.isArray(_) && _.length === (ad-1)*ad/2, // 3
+              '>': { }
+            },
+            '@object': { // length is no*>@array
+              '': _ => Array.isArray(_) && _.length === no*ad, // 6
+              '.': {},
+            },
+          },
+          '.': {  // length is length of >>@object
+            'S': {
+              '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === no*ad,
+              '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === no*ad,
+              '@number': isUndefined,
+              '@date': isUndefined,
+              '@array': isUndefined,
+              '@object': isUndefined,
+              '@null': isUndefined,
+              '>': isUndefined,
+              '.nonExist': isUndefined,
+            },
+            'N': {
+              '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === no*ad,
+              '@string': isUndefined,
+              '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === no*ad,
+              '@date': isUndefined,
+              '@array': isUndefined,
+              '@object': isUndefined,
+              '@null': isUndefined,
+              '>': isUndefined,
+              '.nonExist': isUndefined,
+            },
+            'D': {
+              '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === no*ad,
+              '@string': isUndefined,
+              '@number': isUndefined,
+              '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === no*ad,
+              '@array': isUndefined,
+              '@object': isUndefined,
+              '@null': isUndefined,
+              '>': isUndefined,
+              '.nonExist': isUndefined,
+            },
+            'null': {
+              '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === no*ad,
+              '@string': isUndefined,
+              '@number': isUndefined,
+              '@date': isUndefined,
+              '@array': isUndefined,
+              '@object': isUndefined,
+              '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === no*ad,
+              '>': isUndefined,
+              '.nonExist': isUndefined,
+            },
+            'O': {
+              '': {
+                '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === no*ad,
+                '@string': isUndefined,
+                '@number': isUndefined,
+                '@date': isUndefined,
+                '@array': isUndefined,
+                '@object': isUndefined,
+                '@object': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === no*ad,
+                '@null': isUndefined,
+                '>': isUndefined,
+                '.nonExist': isUndefined,
+              },
+              '.': {
+                'S': {
+                  '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 6,
+                  '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 6,
+                  '@number': isUndefined,
+                  '@date': isUndefined,
+                  '@array': isUndefined,
+                  '@object': isUndefined,
+                  '@null': isUndefined,
+                  '>': isUndefined,
+                  '.nonExist': isUndefined,
+                },
+                'N': {
+                  '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 6,
+                  '@string': isUndefined,
+                  '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 6,
+                  '@date': isUndefined,
+                  '@array': isUndefined,
+                  '@object': isUndefined,
+                  '@null': isUndefined,
+                  '>': isUndefined,
+                  '.nonExist': isUndefined,
+                },
+                'D': {
+                  '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 6,
+                  '@string': isUndefined,
+                  '@number': isUndefined,
+                  '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 6,
+                  '@array': isUndefined,
+                  '@object': isUndefined,
+                  '@null': isUndefined,
+                  '>': isUndefined,
+                  '.nonExist': isUndefined,
+                },
+                'null': {
+                  '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 6,
+                  '@string': isUndefined,
+                  '@number': isUndefined,
+                  '@date': isUndefined,
+                  '@array': isUndefined,
+                  '@object': isUndefined,
+                  '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 6,
+                  '>': isUndefined,
+                  '.nonExist': isUndefined,
+                },
+                'O': {
+                  '': {
+                    '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === 6,
+                    '@string': isUndefined,
+                    '@number': isUndefined,
+                    '@date': isUndefined,
+                    '@array': isUndefined,
+                    '@object': isUndefined,
+                    '@object': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === 6,
+                    '@null': isUndefined,
+                    '>': isUndefined,
+                    '.nonExist': isUndefined,
+                  },
+                  '.': {
+                    'S': {
+                      '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 6,
+                      '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 6,
+                      '@number': isUndefined,
+                      '@date': isUndefined,
+                      '@array': isUndefined,
+                      '@object': isUndefined,
+                      '@null': isUndefined,
+                      '>': isUndefined,
+                      '.nonExist': isUndefined,
+                    },
+                    'N': {
+                      '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 6,
+                      '@string': isUndefined,
+                      '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 6,
+                      '@date': isUndefined,
+                      '@array': isUndefined,
+                      '@object': isUndefined,
+                      '@null': isUndefined,
+                      '>': isUndefined,
+                      '.nonExist': isUndefined,
+                    },
+                    'D': {
+                      '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 6,
+                      '@string': isUndefined,
+                      '@number': isUndefined,
+                      '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 6,
+                      '@array': isUndefined,
+                      '@object': isUndefined,
+                      '@null': isUndefined,
+                      '>': isUndefined,
+                      '.nonExist': isUndefined,
+                    },
+                    'null': {
+                      '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 6,
+                      '@string': isUndefined,
+                      '@number': isUndefined,
+                      '@date': isUndefined,
+                      '@array': isUndefined,
+                      '@object': isUndefined,
+                      '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 6,
+                      '>': isUndefined,
+                      '.nonExist': isUndefined,
+                    },
+                    'O': {
+                      '': {
+                        '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === 6,
+                        '@string': isUndefined,
+                        '@number': isUndefined,
+                        '@date': isUndefined,
+                        '@array': isUndefined,
+                        '@object': isUndefined,
+                        '@object': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === 6,
+                        '@null': isUndefined,
+                        '>': isUndefined,
+                        '.nonExist': isUndefined,
+                      },
+                      '.': {
+                        'S': {
+                          '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 6,
+                          '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 6,
+                          '@number': isUndefined,
+                          '@date': isUndefined,
+                          '@array': isUndefined,
+                          '@object': isUndefined,
+                          '@null': isUndefined,
+                          '>': isUndefined,
+                          '.nonExist': isUndefined,
+                        },
+                        'N': {
+                          '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 6,
+                          '@string': isUndefined,
+                          '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 6,
+                          '@date': isUndefined,
+                          '@array': isUndefined,
+                          '@object': isUndefined,
+                          '@null': isUndefined,
+                          '>': isUndefined,
+                          '.nonExist': isUndefined,
+                        },
+                        'D': {
+                          '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 6,
+                          '@string': isUndefined,
+                          '@number': isUndefined,
+                          '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 6,
+                          '@array': isUndefined,
+                          '@object': isUndefined,
+                          '@null': isUndefined,
+                          '>': isUndefined,
+                          '.nonExist': isUndefined,
+                        },
+                        'null': {
+                          '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 6,
+                          '@string': isUndefined,
+                          '@number': isUndefined,
+                          '@date': isUndefined,
+                          '@array': isUndefined,
+                          '@object': isUndefined,
+                          '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 6,
+                          '>': isUndefined,
+                          '.nonExist': isUndefined,
+                        },
+                        'O': { '': isUndefined },
+                      }
+                    },
+                  }
+                },
+              }
+            },
+          },
+          '>': {
+            '': {
+              '': Array.isArray(_) && _.length === (3*bl) + 1,
+              '@string': _ => Array.isArray(_) && _.length === ns*ad,
+              '@number': _ => Array.isArray(_) && _.length === nn*ad,
+              '@date': _ => Array.isArray(_) && _.length === nd*ad,
+              '@null': _ => Array.isArray(_) && _.length === nu*ad,
+              '@array': { // count length
+                '': _ => Array.isArray(_) && _.length === 1,
+                '>': { }
+              },
+              '@object': { // clength is no*>>@array
+                '': _ => Array.isArray(_) && _.length === no*3, //6
+                '.': {},
+              },
+            },
+            '.': {  // length is length of >>>@object
+              'S': {
+                '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === no*3,
+                '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === no*3,
+                '@number': isUndefined,
+                '@date': isUndefined,
+                '@array': isUndefined,
+                '@object': isUndefined,
+                '@null': isUndefined,
+                '>': isUndefined,
+                '.nonExist': isUndefined,
+              },
+              'N': {
+                '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === no*3,
+                '@string': isUndefined,
+                '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === no*3,
+                '@date': isUndefined,
+                '@array': isUndefined,
+                '@object': isUndefined,
+                '@null': isUndefined,
+                '>': isUndefined,
+                '.nonExist': isUndefined,
+              },
+              'D': {
+                '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === no*3,
+                '@string': isUndefined,
+                '@number': isUndefined,
+                '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === no*3,
+                '@array': isUndefined,
+                '@object': isUndefined,
+                '@null': isUndefined,
+                '>': isUndefined,
+                '.nonExist': isUndefined,
+              },
+              'null': {
+                '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === no*3,
+                '@string': isUndefined,
+                '@number': isUndefined,
+                '@date': isUndefined,
+                '@array': isUndefined,
+                '@object': isUndefined,
+                '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === no*3,
+                '>': isUndefined,
+                '.nonExist': isUndefined,
+              },
+              'O': {
+                '': {
+                  '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === no*3,
+                  '@string': isUndefined,
+                  '@number': isUndefined,
+                  '@date': isUndefined,
+                  '@array': isUndefined,
+                  '@object': isUndefined,
+                  '@object': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === no*3,
+                  '@null': isUndefined,
+                  '>': isUndefined,
+                  '.nonExist': isUndefined,
+                },
+                '.': {
+                  'S': {
+                    '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 6,
+                    '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 6,
+                    '@number': isUndefined,
+                    '@date': isUndefined,
+                    '@array': isUndefined,
+                    '@object': isUndefined,
+                    '@null': isUndefined,
+                    '>': isUndefined,
+                    '.nonExist': isUndefined,
+                  },
+                  'N': {
+                    '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 6,
+                    '@string': isUndefined,
+                    '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 6,
+                    '@date': isUndefined,
+                    '@array': isUndefined,
+                    '@object': isUndefined,
+                    '@null': isUndefined,
+                    '>': isUndefined,
+                    '.nonExist': isUndefined,
+                  },
+                  'D': {
+                    '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 6,
+                    '@string': isUndefined,
+                    '@number': isUndefined,
+                    '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 6,
+                    '@array': isUndefined,
+                    '@object': isUndefined,
+                    '@null': isUndefined,
+                    '>': isUndefined,
+                    '.nonExist': isUndefined,
+                  },
+                  'null': {
+                    '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 6,
+                    '@string': isUndefined,
+                    '@number': isUndefined,
+                    '@date': isUndefined,
+                    '@array': isUndefined,
+                    '@object': isUndefined,
+                    '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 6,
+                    '>': isUndefined,
+                    '.nonExist': isUndefined,
+                  },
+                  'O': {
+                    '': {
+                      '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === 6,
+                      '@string': isUndefined,
+                      '@number': isUndefined,
+                      '@date': isUndefined,
+                      '@array': isUndefined,
+                      '@object': isUndefined,
+                      '@object': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === 6,
+                      '@null': isUndefined,
+                      '>': isUndefined,
+                      '.nonExist': isUndefined,
+                    },
+                    '.': {
+                      'S': {
+                        '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 6,
+                        '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 6,
+                        '@number': isUndefined,
+                        '@date': isUndefined,
+                        '@array': isUndefined,
+                        '@object': isUndefined,
+                        '@null': isUndefined,
+                        '>': isUndefined,
+                        '.nonExist': isUndefined,
+                      },
+                      'N': {
+                        '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 6,
+                        '@string': isUndefined,
+                        '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 6,
+                        '@date': isUndefined,
+                        '@array': isUndefined,
+                        '@object': isUndefined,
+                        '@null': isUndefined,
+                        '>': isUndefined,
+                        '.nonExist': isUndefined,
+                      },
+                      'D': {
+                        '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 6,
+                        '@string': isUndefined,
+                        '@number': isUndefined,
+                        '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 6,
+                        '@array': isUndefined,
+                        '@object': isUndefined,
+                        '@null': isUndefined,
+                        '>': isUndefined,
+                        '.nonExist': isUndefined,
+                      },
+                      'null': {
+                        '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 6,
+                        '@string': isUndefined,
+                        '@number': isUndefined,
+                        '@date': isUndefined,
+                        '@array': isUndefined,
+                        '@object': isUndefined,
+                        '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 6,
+                        '>': isUndefined,
+                        '.nonExist': isUndefined,
+                      },
+                      'O': {
+                        '': {
+                          '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === 6,
+                          '@string': isUndefined,
+                          '@number': isUndefined,
+                          '@date': isUndefined,
+                          '@array': isUndefined,
+                          '@object': isUndefined,
+                          '@object': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === 6,
+                          '@null': isUndefined,
+                          '>': isUndefined,
+                          '.nonExist': isUndefined,
+                        },
+                        '.': {
+                          'S': {
+                            '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 6,
+                            '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 6,
+                            '@number': isUndefined,
+                            '@date': isUndefined,
+                            '@array': isUndefined,
+                            '@object': isUndefined,
+                            '@null': isUndefined,
+                            '>': isUndefined,
+                            '.nonExist': isUndefined,
+                          },
+                          'N': {
+                            '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 6,
+                            '@string': isUndefined,
+                            '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 6,
+                            '@date': isUndefined,
+                            '@array': isUndefined,
+                            '@object': isUndefined,
+                            '@null': isUndefined,
+                            '>': isUndefined,
+                            '.nonExist': isUndefined,
+                          },
+                          'D': {
+                            '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 6,
+                            '@string': isUndefined,
+                            '@number': isUndefined,
+                            '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 6,
+                            '@array': isUndefined,
+                            '@object': isUndefined,
+                            '@null': isUndefined,
+                            '>': isUndefined,
+                            '.nonExist': isUndefined,
+                          },
+                          'null': {
+                            '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 6,
+                            '@string': isUndefined,
+                            '@number': isUndefined,
+                            '@date': isUndefined,
+                            '@array': isUndefined,
+                            '@object': isUndefined,
+                            '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 6,
+                            '>': isUndefined,
+                            '.nonExist': isUndefined,
+                          },
+                          'O': { '': isUndefined },
+                        }
+                      },
+                    }
+                  },
+                }
+              },
+            },
+            '>': {
+              '': {
+                '': Array.isArray(_) && _.length === bl,
+                '@string': _ => Array.isArray(_) && _.length === ns,
+                '@number': _ => Array.isArray(_) && _.length === nn,
+                '@date': _ => Array.isArray(_) && _.length === nd,
+                '@null': _ => Array.isArray(_) && _.length === nu,
+                '@array': { // count length
+                  '': _ => isUndefined,
+                  '>': { }
+                },
+                '@object': { // clength is no*>>@array
+                  '': _ => Array.isArray(_) && _.length === no, //2
+                  '.': {},
+                },
+              },
+              '.': {  // length is length of >>>>@object
+                'S': {
+                  '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === no,
+                  '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === no,
+                  '@number': isUndefined,
+                  '@date': isUndefined,
+                  '@array': isUndefined,
+                  '@object': isUndefined,
+                  '@null': isUndefined,
+                  '>': isUndefined,
+                  '.nonExist': isUndefined,
+                },
+                'N': {
+                  '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === no,
+                  '@string': isUndefined,
+                  '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === no,
+                  '@date': isUndefined,
+                  '@array': isUndefined,
+                  '@object': isUndefined,
+                  '@null': isUndefined,
+                  '>': isUndefined,
+                  '.nonExist': isUndefined,
+                },
+                'D': {
+                  '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === no,
+                  '@string': isUndefined,
+                  '@number': isUndefined,
+                  '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === no,
+                  '@array': isUndefined,
+                  '@object': isUndefined,
+                  '@null': isUndefined,
+                  '>': isUndefined,
+                  '.nonExist': isUndefined,
+                },
+                'null': {
+                  '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === no,
+                  '@string': isUndefined,
+                  '@number': isUndefined,
+                  '@date': isUndefined,
+                  '@array': isUndefined,
+                  '@object': isUndefined,
+                  '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === no,
+                  '>': isUndefined,
+                  '.nonExist': isUndefined,
+                },
+                'O': {
+                  '': {
+                    '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === no,
+                    '@string': isUndefined,
+                    '@number': isUndefined,
+                    '@date': isUndefined,
+                    '@array': isUndefined,
+                    '@object': isUndefined,
+                    '@object': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === no,
+                    '@null': isUndefined,
+                    '>': isUndefined,
+                    '.nonExist': isUndefined,
+                  },
+                  '.': {
+                    'S': {
+                      '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 2,
+                      '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 2,
+                      '@number': isUndefined,
+                      '@date': isUndefined,
+                      '@array': isUndefined,
+                      '@object': isUndefined,
+                      '@null': isUndefined,
+                      '>': isUndefined,
+                      '.nonExist': isUndefined,
+                    },
+                    'N': {
+                      '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 2,
+                      '@string': isUndefined,
+                      '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 2,
+                      '@date': isUndefined,
+                      '@array': isUndefined,
+                      '@object': isUndefined,
+                      '@null': isUndefined,
+                      '>': isUndefined,
+                      '.nonExist': isUndefined,
+                    },
+                    'D': {
+                      '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 2,
+                      '@string': isUndefined,
+                      '@number': isUndefined,
+                      '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 2,
+                      '@array': isUndefined,
+                      '@object': isUndefined,
+                      '@null': isUndefined,
+                      '>': isUndefined,
+                      '.nonExist': isUndefined,
+                    },
+                    'null': {
+                      '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 2,
+                      '@string': isUndefined,
+                      '@number': isUndefined,
+                      '@date': isUndefined,
+                      '@array': isUndefined,
+                      '@object': isUndefined,
+                      '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 2,
+                      '>': isUndefined,
+                      '.nonExist': isUndefined,
+                    },
+                    'O': {
+                      '': {
+                        '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === 2,
+                        '@string': isUndefined,
+                        '@number': isUndefined,
+                        '@date': isUndefined,
+                        '@array': isUndefined,
+                        '@object': isUndefined,
+                        '@object': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === 2,
+                        '@null': isUndefined,
+                        '>': isUndefined,
+                        '.nonExist': isUndefined,
+                      },
+                      '.': {
+                        'S': {
+                          '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 2,
+                          '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 2,
+                          '@number': isUndefined,
+                          '@date': isUndefined,
+                          '@array': isUndefined,
+                          '@object': isUndefined,
+                          '@null': isUndefined,
+                          '>': isUndefined,
+                          '.nonExist': isUndefined,
+                        },
+                        'N': {
+                          '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 2,
+                          '@string': isUndefined,
+                          '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 2,
+                          '@date': isUndefined,
+                          '@array': isUndefined,
+                          '@object': isUndefined,
+                          '@null': isUndefined,
+                          '>': isUndefined,
+                          '.nonExist': isUndefined,
+                        },
+                        'D': {
+                          '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 2,
+                          '@string': isUndefined,
+                          '@number': isUndefined,
+                          '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 2,
+                          '@array': isUndefined,
+                          '@object': isUndefined,
+                          '@null': isUndefined,
+                          '>': isUndefined,
+                          '.nonExist': isUndefined,
+                        },
+                        'null': {
+                          '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 2,
+                          '@string': isUndefined,
+                          '@number': isUndefined,
+                          '@date': isUndefined,
+                          '@array': isUndefined,
+                          '@object': isUndefined,
+                          '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 2,
+                          '>': isUndefined,
+                          '.nonExist': isUndefined,
+                        },
+                        'O': {
+                          '': {
+                            '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === 2,
+                            '@string': isUndefined,
+                            '@number': isUndefined,
+                            '@date': isUndefined,
+                            '@array': isUndefined,
+                            '@object': isUndefined,
+                            '@object': _ => Array.isArray(_) && _.every(__ => typeof(__)==='object'&&!Array.isArray(__)&&__!==null,) && _.length === 2,
+                            '@null': isUndefined,
+                            '>': isUndefined,
+                            '.nonExist': isUndefined,
+                          },
+                          '.': {
+                            'S': {
+                              '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 2,
+                              '@string': _ => Array.isArray(_) && _.every(__ => typeof(__)==='string') && _.length === 2,
+                              '@number': isUndefined,
+                              '@date': isUndefined,
+                              '@array': isUndefined,
+                              '@object': isUndefined,
+                              '@null': isUndefined,
+                              '>': isUndefined,
+                              '.nonExist': isUndefined,
+                            },
+                            'N': {
+                              '': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 2,
+                              '@string': isUndefined,
+                              '@number': _ => Array.isArray(_) && _.every(__ => typeof(__)==='number') && _.length === 2,
+                              '@date': isUndefined,
+                              '@array': isUndefined,
+                              '@object': isUndefined,
+                              '@null': isUndefined,
+                              '>': isUndefined,
+                              '.nonExist': isUndefined,
+                            },
+                            'D': {
+                              '': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 2,
+                              '@string': isUndefined,
+                              '@number': isUndefined,
+                              '@date': _ => Array.isArray(_) && _.every(__ => typeof(__) === 'string' && __.includes('T')) && _.length === 2,
+                              '@array': isUndefined,
+                              '@object': isUndefined,
+                              '@null': isUndefined,
+                              '>': isUndefined,
+                              '.nonExist': isUndefined,
+                            },
+                            'null': {
+                              '': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 2,
+                              '@string': isUndefined,
+                              '@number': isUndefined,
+                              '@date': isUndefined,
+                              '@array': isUndefined,
+                              '@object': isUndefined,
+                              '@null': _ => Array.isArray(_) && _.every(__ => __===null) && _.length === 2,
+                              '>': isUndefined,
+                              '.nonExist': isUndefined,
+                            },
+                            'O': { '': isUndefined },
+                          }
+                        },
+                      }
+                    },
+                  }
+                },
+              },
+              '>': {
+                '': {
+                  '': isUndefined,
+                  '@string': isUndefined,
+                  '@number': isUndefined,
+                  '@date': isUndefined,
+                  '@null': isUndefined,
+                  '@array': isUndefined,
+                  '@object': isUndefined,
+                },
+              }
+            },
+          },
+        },
+      },
+    }
+  }
+  // .O  === @object.O
+  Object.assign(complexTests['A']['>']['.'], complexTests['A']['.'])
+  Object.assign(complexTests['A']['>']['']['@object']['.'], complexTests['A']['.'])
+  Object.assign(complexTests['A']['>']['>']['']['@object']['.'], complexTests['A']['>']['>']['.'])
+
+
+  Object.assign(complexTests['A']['>']['']['@array']['>'], complexTests['A']['>']['>'])
+  Object.assign(complexTests['A']['>']['>']['']['@array']['>'], complexTests['A']['>']['>']['>'])
+  Object.assign(complexTests['A']['>']['>']['>']['']['@array']['>'], complexTests['A']['>']['>']['>']['>'])
+  Object.assign(complexTests['A']['>']['>']['>']['>']['']['@array']['>'], complexTests['A']['>']['>']['>']['>']['>'])
+
+  /*
   arrayObjectTest = arrayize(objectTests, '')
-  // second order
   arrayOfObjectTest = {
     '.': {
       ...arraySimpleTest,
@@ -336,18 +1344,18 @@ test('test single json explore syntax', t => {
       ...arrayOfObjectTest,
     },
   }
+  */
 
   let anybad = false
   console.log('example:', example)
   let vglobal = {t, example, analyser, anybad: false, get, dget}
   doTest(simpleTests, '', vglobal)
-  doTest(arrayTests, 'A', vglobal)
   doTest(objectTests, 'O', vglobal)
+  doTest(complexTests, '', vglobal)
   if (vglobal.anybad) debugger
   debugger
   t.pass()
 })
-
 test.skip('test json explore syntax', t => {
   let analyser = new JsonAnalyser()
   let result = analyser.analysis(data)

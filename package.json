@@ -15,7 +15,8 @@
   "license": "MIT",
   "dependencies": {
     "ac-input": "*",
-    "babel-preset-env": "^1.7.0"
+    "babel-preset-env": "^1.7.0",
+    "idb": "^4.0.3"
   },
   "devDependencies": {
     "node-sass": "^4.11.0",

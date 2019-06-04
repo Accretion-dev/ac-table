@@ -1,14 +1,25 @@
 <template>
   <div :class="prefixCls">
     <div :class="`${prefixCls}-show-button`"> </div>
-    <div :class="`${prefixCls}-header`"> </div>
+    <div :class="`${prefixCls}-header`">
+      <span>
+        cleanTree
+      </span>
+    </div>
     <div :class="`${prefixCls}-main`">
-      <div :class="`${prefixCls}-sidebar`">
-        <ac-tree :class="`${prefixCls}-sidebar-tree`"
-                 :tree="tree" @update="onupdate"
-        />
-      </div>
-      <div :class="`${prefixCls}-content`"> </div>
+      <template v-if="loading">
+        <div :class="`${prefixCls}-loading`">
+          loading...
+        </div>
+      </template>
+      <template v-else>
+        <div :class="`${prefixCls}-sidebar`">
+          <ac-tree :class="`${prefixCls}-sidebar-tree`"
+                   :tree="tree" @update="onupdate"
+          />
+        </div>
+        <div :class="`${prefixCls}-content`"> </div>
+      </template>
     </div>
     <div :class="`${prefixCls}-footer`">
       <span>
@@ -21,26 +32,79 @@
 <script>
 const prefixCls = 'ac-table'
 import {JsonAnalyser} from '../utils/jsonAnalyser.js'
+import { openDB, deleteDB, wrap, unwrap } from 'idb'
 import acTree from './ac-tree'
 
 export default {
   name: 'ac-table',
   components: {acTree},
   props: {
-    data: { type: Array, default () { return [] } }
+    data: { type: Array, default () { return [] } },
+    uuid: { type: String, default () { return (new Date()).toISOString() }},
   },
   data () {
     return {
       prefixCls,
+      db: null,
+      loading: true,
       analyser: null,
       tree: {root: true, status:{open:false}},
     }
   },
   created () {
-    this.analyser = new JsonAnalyser()
-    this.updateTree(this.data)
+    this.initDatabase().catch(error => {// in case of error, do not use database
+      console.error(error)
+      this.loading = false
+      this.initTree()
+    })
   },
   methods: {
+    async initDatabase () {
+      if (!window.indexedDB) {
+        throw Error('no support for indexedDB')
+      } else {
+        let db = await openDB('ac-table', 1, {
+          upgrade (db, oldVersion, newVersion, transaction) {
+            //db.createObjectStore('trees', { keyPath: 'uuid' })
+            db.createObjectStore('trees')
+          }
+        })
+        let tx = db.transaction('trees', 'readwrite')
+        let tree = await db.get('trees', this.uuid)
+        if (!tree) {
+          this.initTree()
+          await db.put('trees', this.tree, this.uuid)
+        } else {
+          this.initTree(tree)
+        }
+        // clean old trees
+        let keys = await db.getAllKeys('trees')
+        let now = new Date()
+        keys = keys.filter(_ => !isNaN(new Date(_)))
+        keys = keys.slice(10) // leave the latest 3 random trees
+        for (let each of keys) {
+          await db.delete('trees', each)
+        }
+        await tx.done
+        this.db = db
+        this.loading = false
+      }
+    },
+    async updateDatabase () {
+      let db = this.db
+      let tx = db.transaction('trees', 'readwrite')
+      await db.put('trees', this.tree, this.uuid)
+      await tx.done
+    },
+    initTree (tree) {
+      if (tree) {
+        this.analyser = new JsonAnalyser({tree})
+        this.tree = tree
+      } else {
+        this.analyser = new JsonAnalyser()
+        this.updateTree(this.data)
+      }
+    },
     updateTree (data) {
       let {structTree, tree} = this.analyser.analysis(data)
       this.goThrough(tree, _ => {
@@ -52,6 +116,7 @@ export default {
     },
     onupdate (change, value) {
       this.$emit('update', change, value)
+      this.updateDatabase()
     },
     goThrough(root, func) {
       func(root)
@@ -79,10 +144,19 @@ $fontFamily: "'Courier New', Courier, monospace";
 .#{$pre}-header {
   height: 2em;
   background: #ffeb3c;
+  display: flex;
+  //justify-content: center;
+  align-items: center;
 }
 .#{$pre}-main {
   display: flex;
   flex: 1;
+}
+.#{$pre}-loading {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
 }
 .#{$pre}-sidebar {
   display: flex;

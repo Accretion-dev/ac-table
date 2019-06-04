@@ -9,7 +9,7 @@
       </test-block>
       <test-block title="Test simple input" name="simple" id="simple">
         <div>
-          <ac-table :data="data"/>
+          <ac-table :data="data" uuid="test"/>
         </div>
       </test-block>
     </test-env>

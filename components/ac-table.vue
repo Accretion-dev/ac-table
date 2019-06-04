@@ -79,7 +79,6 @@ $fontFamily: "'Courier New', Courier, monospace";
   flex: 1;
 }
 .#{$pre}-sidebar {
-  background: #ffd24a;
   display: flex;
 }
 .#{$pre}-sidebar-tree {

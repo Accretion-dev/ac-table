@@ -19,6 +19,8 @@
   },
   "devDependencies": {
     "node-sass": "^4.11.0",
-    "sass-loader": "^7.1.0"
+    "sass-loader": "^7.1.0",
+    "svg-sprite-loader": "^4.1.6",
+    "vue-sprited-svg-loader": "^1.1.1"
   }
 }

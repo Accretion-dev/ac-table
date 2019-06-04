@@ -80,7 +80,6 @@ export default {
 <style lang="scss">
 $pre: ac-table-tree;
 .#{$pre} {
-  background: #76bcf9;
 }
 .#{$pre}-tab {
   background: pink;

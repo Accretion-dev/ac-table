@@ -4,9 +4,9 @@ const fs = require('fs')
 const {DateTime} = require('luxon')
 console.log('new run')
 
-import data from './data/999_2.json'
+import data from '../data/999_2.json'
 //import data_result from './data/999_2.result.json'
-import {JsonAnalyser} from '../utils/jsonAnalyser.js'
+import {JsonAnalyser} from '../../utils/jsonAnalyser.js'
 import { diff, addedDiff, deletedDiff, updatedDiff, detailedDiff } from 'deep-object-diff'
 
 function range(N) { // there is an unknown bug, i can not use the [...Array.keys(N)].map()
@@ -3790,7 +3790,7 @@ test('test single json explore syntax', t => {
   if (vglobal.anybad) debugger
   t.pass()
 })
-test.skip('test json explore syntax', t => {
+test.only('test json explore syntax', t => {
   let analyser = new JsonAnalyser()
   let result = analyser.analysis(data)
   let types = {
@@ -3802,7 +3802,7 @@ test.skip('test json explore syntax', t => {
       'aS', 'aS>', 'aS>@number', 'aS>@string', 'aS.nonExist',
     ],
     SND: [
-      'SND', 'SND@string', 'SND@number', 'SND@date', 'SND@array', 'SND@object', 'SND.nonExist', 'SND>',
+      'SND', 'SND@string', 'SND@number', 'SND@date', 'SND@null', 'SND@array', 'SND@object', 'SND.nonExist', 'SND>',
     ],
     aSND: [
       'aSND', 'aSND@string', 'aSND@number', 'aSND@date', 'aSND@array', 'aSND@object', 'aSND@null','aSND.nonExist',
@@ -3904,14 +3904,15 @@ test.skip('test json explore syntax', t => {
     'aSNDAO>>@object.aS',
     'aSNDAO>>@array.aS',
   ]
+  let singleTestResults = {}
   if (singleTest.length) {
     for (let each of singleTest) {
       let singleType  = analyser.getTypeByPath(each)
       let singleValue = analyser.getValueByPath(data, each)
       let singleValueClean = singleValue.filter(_ => _!==undefined)
-      console.log(each, {each, singleType, singleValue, singleValueClean})
+      singleTestResults[each] = singleValueClean
     }
-    debugger
+    console.log('singleTestResult:', singleTestResults)
   }
   for (let key of keys) {
     getType[key] = analyser.getTypeByPath(types[key])
@@ -3927,9 +3928,5 @@ test.skip('test json explore syntax', t => {
   console.log('getType:', getType)
   console.log('getValue:', getValue)
   console.log('getValueClean:', getValueClean)
-  //let d = diff(getValueClean, data_result)
-  //console.log('diff:', d)
-  //t.deepEqual(getValueClean, data_result)
-  debugger
 	t.pass()
 })

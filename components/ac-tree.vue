@@ -13,7 +13,7 @@
       > - </span>
     </div>
     <div :class="`${prefixCls}-content`">
-      <ac-tree-item :tree="tree" />
+      <ac-tree-item :tree="tree" @update="onupdate"/>
     </div>
   </div>
 </template>
@@ -36,6 +36,9 @@ export default {
   computed: {
   },
   methods: {
+    onupdate (change, value) {
+      this.$emit('update', change, value)
+    },
     goThrough(root, func) {
       func(root)
       if (root.children) {

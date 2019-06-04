@@ -5,7 +5,7 @@
     <div :class="`${prefixCls}-main`">
       <div :class="`${prefixCls}-sidebar`">
         <ac-tree :class="`${prefixCls}-sidebar-tree`"
-                 :tree="tree"
+                 :tree="tree" @update="onupdate"
         />
       </div>
       <div :class="`${prefixCls}-content`"> </div>
@@ -31,22 +31,28 @@ export default {
   },
   data () {
     return {
-      prefixCls
+      prefixCls,
+      analyser: null,
+      tree: {root: true, status:{open:false}},
     }
   },
-  computed: {
-    tree () {
-      let analyser = new JsonAnalyser()
-      let {structTree, tree} = analyser.analysis(this.data)
+  created () {
+    this.analyser = new JsonAnalyser()
+    this.updateTree(this.data)
+  },
+  methods: {
+    updateTree (data) {
+      let {structTree, tree} = this.analyser.analysis(data)
       this.goThrough(tree, _ => {
         _.status={
           open:false
         }
       })
-      return tree
-    }
-  },
-  methods: {
+      this.tree = tree
+    },
+    onupdate (change, value) {
+      this.$emit('update', change, value)
+    },
     goThrough(root, func) {
       func(root)
       if (root.children) {

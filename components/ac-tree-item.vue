@@ -20,8 +20,8 @@
           <span>&nbsp;</span><icons :name="icon.type" size="0.9em"/><span>&nbsp;</span>
         </span>
         <span :class="`${prefixCls}-name`">{{tree.name}}</span>
+        <pre ref="comments" :class="`${prefixCls}-comments`">{{comments}}</pre>
       </span>
-      <pre ref="comments" :class="`${prefixCls}-comments`">{{comments}}</pre>
     </div>
     <div v-if="!!tree.children" v-show="tree.root||tree.status.open" style="position: relative">
       <div ref="vbar"
@@ -30,10 +30,12 @@
            @mouseleave="leaveBody"
       />
       <ac-tree-item
-         v-for="child of tree.children"
+         v-for="(child,index) of tree.children"
         :keys="child.path"
+        :index="index"
         :tree="child"
         :level="level+1"
+        @update="onupdate"
       />
     </div>
   </div>
@@ -50,6 +52,7 @@ const typeMap = {
   'mixed': 'M',
   'array': 'A',
   'object': 'O',
+  'empty': 'E',
 }
 
 export default {
@@ -118,9 +121,16 @@ export default {
       }
     },
     onclick (event) {
-       this.tree.status.open = !this.tree.status.open
-       this.$forceUpdate()
-    }
+      const goodType = ['array', 'object', 'mixed']
+      if (goodType.includes(this.tree.type)) {
+        this.tree.status.open = !this.tree.status.open
+        this.$forceUpdate()
+        this.$emit('update', {status:{open:this.tree.status.open}}, this.tree)
+      }
+    },
+    onupdate (change, value) {
+      this.$emit('update', change, value)
+    },
   },
   beforeCreate: function () {
     this.$options.components.acTreeItem = require('./ac-tree-item.vue').default

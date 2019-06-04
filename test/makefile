@@ -1,3 +1,4 @@
+.PHONY: ava like
 all:
 	@cat makefile
 watch:

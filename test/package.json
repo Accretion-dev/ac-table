@@ -9,11 +9,11 @@
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
     "free": "nodemon --watch free.js --exec 'babel-node --presets=env --inspect -- free.js'",
-    "ava": "nodemon --watch ava.js --watch '../**/*.js' --exec 'babel-node --presets=env --inspect -- node_modules/ava/profile.js ava.js'",
-    "ava2": "nodemon --watch ava.js --watch '../**/*.js' --exec 'babel-node --presets=env --inspect=9230 -- node_modules/ava/profile.js ava.js'"
+    "ava": "nodemon --watch ava --watch '../**/*.js'  --exec 'cd ava;babel-node --presets=env --inspect -- ../node_modules/ava/profile.js ava.js'",
+    "ava2": "nodemon --watch ava --watch '../**/*.js' --exec 'cd ava;babel-node --presets=env --inspect=9230 -- ../node_modules/ava/profile.js ava.js'"
   },
   "dependencies": {
-    "axios": "^0.18.0",
+    "axios": "^0.19.0",
     "core-js": "^2.6.5",
     "deep-object-diff": "^1.1.0",
     "deepcopy": "^2.0.0",

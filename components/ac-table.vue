@@ -35,6 +35,14 @@ import {JsonAnalyser} from '../utils/jsonAnalyser.js'
 import { openDB, deleteDB, wrap, unwrap } from 'idb'
 import acTree from './ac-tree'
 
+/*
+TODO:
+* add view mode
+* write filter syntax
+* add tabs for sidebar
+* design toolbar
+*/
+
 export default {
   name: 'ac-table',
   components: {acTree},

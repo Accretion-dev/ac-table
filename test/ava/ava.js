@@ -3861,6 +3861,7 @@ test.only('test json explore syntax', t => {
       'aaaO>>.title@string',
     ]
   }
+  //aSNDAMMO>@array>@array>@array>.aO>.aN>
   let keys = Object.keys(types)
   let getType = {}
   let getValue = {}
@@ -3903,6 +3904,7 @@ test.only('test json explore syntax', t => {
     'aSNDAO>>.aS',
     'aSNDAO>>@object.aS',
     'aSNDAO>>@array.aS',
+    'aSNDAMMO>@array>@array>@array>.aO>.aN>',
   ]
   let singleTestResults = {}
   if (singleTest.length) {

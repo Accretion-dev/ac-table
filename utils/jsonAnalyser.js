@@ -171,7 +171,12 @@ class JsonAnalyser {
     tree.name = name
     let keys = Object.keys(tree.counts)
     let mixed = true
-    if (keys.length === 1) {
+    if (keys.length === 0) { // array, all array is empty
+      tree.count = 0
+      tree.type = 'empty'
+      mixed = false
+      delete tree.counts
+    } else if (keys.length === 1) {
       let key = keys[0]
       tree.count = tree.counts[key]
       tree.type = key

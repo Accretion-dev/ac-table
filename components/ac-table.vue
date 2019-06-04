@@ -1,18 +1,18 @@
 <template>
   <div :class="prefixCls">
-    <div :class="{[`${prefixCls}-show-button`]: true}"> </div>
-    <div :class="{[`${prefixCls}-header`]: true}"> </div>
-    <div :class="{[`${prefixCls}-main`]: true}">
-      <div :class="{[`${prefixCls}-sidebar`]: true}">
-        <ac-tree :class="{[`${prefixCls}-sidebar-tree`]: true}"
+    <div :class="`${prefixCls}-show-button`"> </div>
+    <div :class="`${prefixCls}-header`"> </div>
+    <div :class="`${prefixCls}-main`">
+      <div :class="`${prefixCls}-sidebar`">
+        <ac-tree :class="`${prefixCls}-sidebar-tree`"
                  :tree="tree"
         />
       </div>
-      <div :class="{[`${prefixCls}-content`]: true}"> </div>
+      <div :class="`${prefixCls}-content`"> </div>
     </div>
-    <div :class="{[`${prefixCls}-footer`]: true}">
-      <span >
-        {{data.length}}
+    <div :class="`${prefixCls}-footer`">
+      <span>
+        {{ data.length }}
       </span>
     </div>
   </div>
@@ -20,7 +20,7 @@
 
 <script>
 const prefixCls = 'ac-table'
-import {analysisJson} from './tools.js'
+import {JsonAnalyser} from '../utils/jsonAnalyser.js'
 import acTree from './ac-tree'
 
 export default {
@@ -29,28 +29,46 @@ export default {
   props: {
     data: { type: Array, default () { return [] } }
   },
-  computed: {
-    tree () {
-      let {structTree, tree} = analysisJson(this.data)
-      return tree
-    }
-  },
   data () {
     return {
       prefixCls
     }
   },
+  computed: {
+    tree () {
+      let analyser = new JsonAnalyser()
+      let {structTree, tree} = analyser.analysis(this.data)
+      this.goThrough(tree, _ => {
+        _.status={
+          open:false
+        }
+      })
+      return tree
+    }
+  },
+  methods: {
+    goThrough(root, func) {
+      func(root)
+      if (root.children) {
+        for (let child of root.children) {
+          this.goThrough(child, func)
+        }
+      }
+    },
+  }
 }
 </script>
 
 <style lang="scss">
 $pre: ac-table;
+$fontFamily: "'Courier New', Courier, monospace";
 .#{$pre} {
+  font-family: #{$fontFamily};
+  font-size: small;
   position: relative;
   display: flex;
   flex-direction: column;
   min-height: 20em;
-  height: 80vh;
 }
 .#{$pre}-header {
   height: 2em;
@@ -63,11 +81,10 @@ $pre: ac-table;
 .#{$pre}-sidebar {
   background: #ffd24a;
   display: flex;
-  width: 300px;
 }
 .#{$pre}-sidebar-tree {
-  margin: 1em;
-  flex: 1;
+  flex:1;
+  margin: 2px;
 }
 .#{$pre}-content {
   background: #8bc34a;

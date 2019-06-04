@@ -1,6 +1,20 @@
 <template>
-  <div :class="prefixCls">
-    <ac-tree-item :tree="tree" />
+  <div :class="`${prefixCls}`">
+    <div :class="`${prefixCls}-tab`">
+    </div>
+    <div :class="`${prefixCls}-tools`">
+      <span
+        :class="`${prefixCls}-tools-button`"
+        @click="onChangeAllFold(1)"
+      > + </span>
+      <span
+        :class="`${prefixCls}-tools-button`"
+        @click="onChangeAllFold(0)"
+      > - </span>
+    </div>
+    <div :class="`${prefixCls}-content`">
+      <ac-tree-item :tree="tree" />
+    </div>
   </div>
 </template>
 
@@ -14,13 +28,52 @@ export default {
   props: {
     tree: { type: Object, default () { return {} } }
   },
-  computed: {
-  },
   data () {
     return {
       prefixCls
     }
   },
+  computed: {
+  },
+  methods: {
+    goThrough(root, func) {
+      func(root)
+      if (root.children) {
+        for (let child of root.children) {
+          this.goThrough(child, func)
+        }
+      }
+    },
+    doForAllSubTree (root, func) {
+      let children = root.$children.filter(_ => _.$options.name === 'ac-table-tree-item')
+      func(root)
+      if (children) {
+        for (let child of children) {
+          this.doForAllSubTree(child, func)
+        }
+      }
+    },
+    onChangeAllFold(status) {
+      let root = this.$children.find(_ => _.$options.name === 'ac-table-tree-item')
+      if (status) {
+        this.doForAllSubTree(root, _=> {
+          if (_.tree.root) return
+          if (_.tree.status.open===false) {
+            _.tree.status.open = true
+            _.$forceUpdate()
+          }
+        })
+      } else {
+        this.doForAllSubTree(root, _=> {
+          if (_.tree.root) return
+          if (_.tree.status.open===true) {
+            _.tree.status.open = false
+            _.$forceUpdate()
+          }
+        })
+      }
+    }
+  }
 }
 </script>
 
@@ -28,6 +81,22 @@ export default {
 $pre: ac-table-tree;
 .#{$pre} {
   background: #76bcf9;
+}
+.#{$pre}-tab {
+  background: pink;
+  height: 1rem;
+}
+.#{$pre}-tools {
+  height: 1rem;
+}
+.#{$pre}-tools-button {
+  padding: 0 0.5rem;
+}
+.#{$pre}-tools-button:hover {
+  background: white;
+}
+.#{$pre}-content {
+  padding: 0 5px;
 }
 
 </style>

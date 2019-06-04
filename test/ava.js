@@ -113,6 +113,8 @@ function doTest(object, prefix, vglobal) {
     //'A>>.A>': (data, paths, arrayDepth) => paths.length === 2,
     //'A>>': (data, paths, arrayDepth) => paths.length === 2,
     //'O.A>>.A>': (data, paths, arrayDepth) => paths.length === 2,
+    //'O.A>>>>.S': (data, paths, arrayDepth) => paths.length === 1,
+    //'A>>>>.O.A>': (data, paths, arrayDepth) => paths.length === 1,
   }
   let type = typeof(object)
   if (type === 'object') {
@@ -135,7 +137,7 @@ function doTest(object, prefix, vglobal) {
     } catch {}
     t.true(good, `${path} failed`)
     if (vglobal.count !== undefined) vglobal.count += 1
-    if (!good) {
+    if (good!==true) {
       vglobal.anybad = true
       console.log('bad path:', path, value)
       debugger
@@ -404,7 +406,7 @@ test('test single json explore syntax', t => {
                   'date': _ => Array.isArray(_) && _.length === nd*s,
                   'null': _ => Array.isArray(_) && _.length === nu*s,
                   'array': { // count length
-                    '': _ => isUndefined,
+                    '': isUndefined,
                     '>': { }
                   },
                   'object': { // clength is no*>>@array
@@ -1108,7 +1110,7 @@ test('test single json explore syntax', t => {
                   'date': _ => Array.isArray(_) && _.length === nd*s,
                   'null': _ => Array.isArray(_) && _.length === nu*s,
                   'array': { // count length
-                    '': _ => isUndefined,
+                    '': isUndefined,
                     '>': { }
                   },
                   'object': { // clength is no*>>@array
@@ -2137,7 +2139,7 @@ test('test single json explore syntax', t => {
                 'date': _ => Array.isArray(_) && _.length === nd,
                 'null': _ => Array.isArray(_) && _.length === nu,
                 'array': { // count length
-                  '': _ => isUndefined,
+                  '': isUndefined,
                   '>': { }
                 },
                 'object': { // clength is no*>>@array
@@ -3101,7 +3103,7 @@ test('test single json explore syntax', t => {
                 'date': _ => Array.isArray(_) && _.length === nd,
                 'null': _ => Array.isArray(_) && _.length === nu,
                 'array': { // count length
-                  '': _ => isUndefined,
+                  '': isUndefined,
                   '>': { }
                 },
                 'object': { // clength is no*>>@array

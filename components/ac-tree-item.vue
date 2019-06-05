@@ -5,7 +5,7 @@
     <div :class="`${prefixCls}-content`" v-if="!(tree.root)">
       <span
         ref='folder'
-        :class="`${prefixCls}-folder`"
+        :class="[`${prefixCls}-folder`, 'ac-unselectable']"
         v-show="tree.children"
       >
         {{this.tree.status.open?'▼':'►'}}
@@ -14,12 +14,12 @@
         @mouseover="overBody"
         @mouseleave="leaveBody">
         <span v-if="icon.array">
-          <span>[</span><icons :name="icon.type" size="0.9em"/><span>]</span>
+          <span class="ac-unselectable">[</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">]</span>
         </span>
         <span v-else>
-          <span>&nbsp;</span><icons :name="icon.type" size="0.9em"/><span>&nbsp;</span>
+          <span class="ac-unselectable">&nbsp;</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">&nbsp;</span>
         </span>
-        <span :class="`${prefixCls}-name`">{{tree.name}}</span>
+        <span :class="[`${prefixCls}-name`,'ac-unselectable']">{{tree.name}}</span>
         <pre ref="comments" :class="`${prefixCls}-comments`">{{comments}}</pre>
       </span>
     </div>
@@ -161,9 +161,6 @@ $pre: ac-table-tree-item;
 }
 .#{$pre}-name {
   padding-left: 0.1em;
-}
-.#{$pre}-name span {
-  padding: 0;
 }
 .#{$pre}-vbar {
   position: absolute;

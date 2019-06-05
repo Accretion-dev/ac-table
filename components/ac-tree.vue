@@ -1,7 +1,5 @@
 <template>
   <div :class="`${prefixCls}`">
-    <div :class="`${prefixCls}-tab`">
-    </div>
     <div :class="`${prefixCls}-tools`">
       <span
         :class="`${prefixCls}-tools-button`"
@@ -83,10 +81,6 @@ export default {
 <style lang="scss">
 $pre: ac-table-tree;
 .#{$pre} {
-}
-.#{$pre}-tab {
-  background: pink;
-  height: 1rem;
 }
 .#{$pre}-tools {
   height: 1rem;

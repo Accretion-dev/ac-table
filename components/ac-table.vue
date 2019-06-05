@@ -17,9 +17,17 @@
       </template>
       <template v-else>
         <div :class="`${prefixCls}-sidebar`">
-          <ac-tree :class="`${prefixCls}-sidebar-tree`"
-                   :tree="tree" @update="onupdate"
-          />
+          <div :class="`${prefixCls}-sidebar-tab`" @click="changeSidebar">
+            <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:sidebar==='tree'}"><span class="ac-unselectable" style="pointer-events:none;">tree</span></span>
+            <span name="show" :class="{[`${prefixCls}-sidebar-tab-selected`]:sidebar==='show'}"><span class="ac-unselectable" style="pointer-events:none;">show</span></span>
+          </div>
+          <keep-alive>
+            <ac-tree ref="tree"
+              :class="`${prefixCls}-sidebar-tree`"
+              :tree="tree" @update="onTreeUpdate"
+              v-if="sidebar==='tree'"
+            />
+          </keep-alive>
         </div>
         <div :class="`${prefixCls}-content`"> </div>
       </template>
@@ -60,6 +68,12 @@ export default {
       loading: true,
       analyser: null,
       tree: {root: true, status:{open:false}},
+      sidebar: 'tree',
+    }
+  },
+  computed: {
+    sidebarMinWidth () {
+
     }
   },
   created () {
@@ -145,9 +159,10 @@ export default {
       })
       this.tree = tree
     },
-    onupdate (change, value) {
+    onTreeUpdate (change, value) {
       this.$emit('update', change, value)
       this.updateDatabase()
+      let tree = this.$refs.tree
     },
     goThrough(root, func) {
       func(root)
@@ -157,6 +172,10 @@ export default {
         }
       }
     },
+    changeSidebar(event) {
+      let target = event.target
+      this.sidebar = target.getAttribute('name')
+    }
   }
 }
 </script>
@@ -191,6 +210,23 @@ $fontFamily: "'Courier New', Courier, monospace";
 }
 .#{$pre}-sidebar {
   display: flex;
+  flex-direction: column;
+}
+.#{$pre}-sidebar-tab {
+  background: #f7faff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.#{$pre}-sidebar-tab-selected {
+  background: #d8ffd7;
+}
+.#{$pre}-sidebar-tab span{
+  flex: 1;
+  text-align: center;
+}
+.#{$pre}-sidebar-tab span:hover{
+  background: #d8ffd7;
 }
 .#{$pre}-sidebar-tree {
   flex:1;
@@ -219,4 +255,12 @@ $fontFamily: "'Courier New', Courier, monospace";
   background: #bffff9;
 }
 
+.ac-unselectable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
 </style>

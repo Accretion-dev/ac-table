@@ -11,7 +11,7 @@
       > - </span>
     </div>
     <div :class="`${prefixCls}-content`">
-      <ac-tree-item :tree="tree" @update="onupdate"/>
+      <ac-tree-item :tree="tree" :treeState="treeState" @update="onupdate"/>
     </div>
   </div>
 </template>
@@ -28,13 +28,19 @@ export default {
   },
   data () {
     return {
-      prefixCls
+      prefixCls,
+      treeState: {
+        selected: ''
+      },
     }
   },
   computed: {
   },
   methods: {
     onupdate (change, value) {
+      //if (change.treeState&&change.treeState.selected) {
+      //  this.$set(this.treeState, 'selected', change.treeState.selected)
+      //}
       this.$emit('update', change, value)
     },
     goThrough(root, func) {
@@ -60,16 +66,14 @@ export default {
         this.doForAllSubTree(root, _=> {
           if (_.tree.root) return
           if (_.tree.status.open===false) {
-            _.tree.status.open = true
-            _.$forceUpdate()
+            _.updateFold(status)
           }
         })
       } else {
         this.doForAllSubTree(root, _=> {
           if (_.tree.root) return
           if (_.tree.status.open===true) {
-            _.tree.status.open = false
-            _.$forceUpdate()
+            _.updateFold(status)
           }
         })
       }

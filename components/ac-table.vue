@@ -69,12 +69,12 @@ export default {
       analyser: null,
       tree: {root: true, status:{open:false}},
       sidebar: 'tree',
+      timers: {
+        updateDatabase: null,
+      }
     }
   },
   computed: {
-    sidebarMinWidth () {
-
-    }
   },
   created () {
     this.initDatabase().catch(error => {// in case of error, do not use database
@@ -115,11 +115,14 @@ export default {
         this.loading = false
       }
     },
-    async updateDatabase () {
-      let db = this.db
-      let tx = db.transaction('trees', 'readwrite')
-      await db.put('trees', this.tree, this.uuid)
-      await tx.done
+    updateDatabase () {
+      clearTimeout(this.timers.updateDatabase)
+      this.timers.updateDatabase = setTimeout(async () => {
+        let db = this.db
+        let tx = db.transaction('trees', 'readwrite')
+        await db.put('trees', this.tree, this.uuid)
+        await tx.done
+      }, 10000)
     },
     async cleanCurrentDatabase () {
       let db = this.db
@@ -217,9 +220,10 @@ $fontFamily: "'Courier New', Courier, monospace";
   display: flex;
   justify-content: center;
   align-items: center;
-}
-.#{$pre}-sidebar-tab-selected {
-  background: #d8ffd7;
+  background: #cfcfcf;
+  .#{$pre}-sidebar-tab-selected {
+    background: white;
+  }
 }
 .#{$pre}-sidebar-tab span{
   flex: 1;

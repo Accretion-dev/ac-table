@@ -2,8 +2,11 @@
   <div :class="prefixCls">
     <div :class="`${prefixCls}-show-button`"> </div>
     <div :class="`${prefixCls}-header`">
-      <span>
-        cleanTree
+      <span @click="cleanCurrentDatabase">
+        cleanCuurent
+      </span>
+      <span @click="cleanAllDatabase">
+        cleanAll
       </span>
     </div>
     <div :class="`${prefixCls}-main`">
@@ -102,6 +105,26 @@ export default {
       let db = this.db
       let tx = db.transaction('trees', 'readwrite')
       await db.put('trees', this.tree, this.uuid)
+      await tx.done
+    },
+    async cleanCurrentDatabase () {
+      let db = this.db
+      let tx = db.transaction('trees', 'readwrite')
+      let exists = await db.get('trees', this.uuid)
+      if (exists) {
+        await db.delete('trees', this.uuid)
+        console.log('clean current database')
+      }
+      await tx.done
+    },
+    async cleanAllDatabase () {
+      let db = this.db
+      let tx = db.transaction('trees', 'readwrite')
+      let keys = await db.getAllKeys('trees')
+      for (let each of keys) {
+        await db.delete('trees', each)
+        console.log('clean all database')
+      }
       await tx.done
     },
     initTree (tree) {

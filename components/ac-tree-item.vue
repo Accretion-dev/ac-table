@@ -29,7 +29,7 @@
             @mouseleave="leaveBody"
           >
             <span> ► </span>
-            <span ref="folderOpen" :class="`${prefixCls}-folder-open`" v-show="status.open"> ▼ </span>
+            <span ref="folderOpen" :class="`${prefixCls}-folder-open`" v-show="tree.status.open"> ▼ </span>
           </span>
           <span :class="`${prefixCls}-title`" @mouseover="overBody" @mouseleave="leaveBody">
             <span v-if="icon.array">
@@ -42,7 +42,7 @@
             <pre ref="comments" :class="`${prefixCls}-comments`">{{comments}}</pre>
           </span>
         </div>
-        <div ref="subtree" :class="`${prefixCls}-subtree`" v-show="status.open">
+        <div ref="subtree" :class="`${prefixCls}-subtree`" v-show="tree.status.open">
           <div ref="vbar"
                :class="`${prefixCls}-vbar`"
                @mouseover="overBody"
@@ -109,9 +109,6 @@ export default {
     }
   },
   computed: {
-    foldSymbol () {
-      return this.status.open?'▼':'►'
-    },
     comments () {
       let result = [`|${this.tree.path}`]
       if (this.tree.count) {
@@ -138,48 +135,21 @@ export default {
     }
   },
   mounted () {
-    //this.$el.style.setProperty('left', 2*this.level + 'em')
-  },
-  watch: {
   },
   created () {
-    this.updateFold()
-    this.$watch('tree', value => {
-      console.log(`${this.tree.path}: tree updated`)
-      //this.updateFold()
-    })
+    this.nodes[this.tree.path] = this
   },
   methods: {
-    _updateFold (open) {
-      if (this.$refs.subtree) {
-        //console.log(this.$refs.subtree, this.$refs.subtree.style.display)
-        if (open) {
-          //console.log('open')
-          this.$refs.subtree.style.setProperty('display', 'unset')
-        } else {
-          //console.log('hide')
-          this.$refs.subtree.style.setProperty('display', 'none')
-        }
-        //console.log('======>', this.$refs.subtree.style.display)
-      }
-      if (this.$refs.folderOpen) {
-        if (open) {
-          this.$refs.folderOpen.style.setProperty('display', 'unset')
-        } else {
-          this.$refs.folderOpen.style.setProperty('display', 'none')
-        }
-      }
-    },
     updateFold (value) {
-      if (value===undefined) {
-        this.status.open = this.tree.status.open
-        //console.log(`${this.tree.path} init open to`, this.status.open)
+      console.log('update fold to', value)
+      this.tree.status.open = value
+    },
+    updateSelected (value) {
+      if (value) {
+        this.$el.classList.add(`${prefixCls}-selected`)
       } else {
-        //console.log(`${this.tree.path} change open to`, value)
-        this.tree.status.open = value
-        this.status.open = value
+        this.$el.classList.remove(`${prefixCls}-selected`)
       }
-      //this._updateFold(this.status.open)
     },
     overBody (event) {
       this.$el.style.setProperty('background', '#d8ffd7')
@@ -204,15 +174,15 @@ export default {
     onclick (event) {
       const goodType = ['array', 'object', 'mixed']
       if (goodType.includes(this.tree.type)) {
-        this.status.open = !this.status.open
-        this.updateFold(this.status.open)
-        this.$emit('update', {status:{open:this.tree.status.open}, treeState:{selected: this.tree.path}}, this.tree)
+        this.tree.status.open = !this.tree.status.open
+        this.updateFold(this.tree.status.open)
+        this.$emit('update', {status:{open:this.tree.status.open}, treeState:{selected: this.tree.path}}, this.tree, this)
       } else {
-        this.$emit('update', {treeState:{selected: this.tree.path}}, this.tree)
+        this.$emit('update', {treeState:{selected: this.tree.path}}, this.tree, this)
       }
     },
-    onupdate (change, value) {
-      this.$emit('update', change, value)
+    onupdate (change, value, origin) {
+      this.$emit('update', change, value, origin)
     },
   },
   beforeCreate: function () {

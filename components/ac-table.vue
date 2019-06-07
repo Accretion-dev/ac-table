@@ -24,7 +24,9 @@
           <keep-alive>
             <ac-tree ref="tree"
               :class="`${prefixCls}-sidebar-tree`"
-              :tree="tree" @update="onTreeUpdate"
+              :tree="tree"
+              :treeState="treeState"
+              @update="onTreeUpdate"
               v-if="sidebar==='tree'"
             />
           </keep-alive>
@@ -68,6 +70,7 @@ export default {
       loading: true,
       analyser: null,
       tree: {root: true, status:{open:false}},
+      treeState: { selected: null },
       sidebar: 'tree',
       timers: {
         updateDatabase: null,
@@ -83,6 +86,8 @@ export default {
       this.initTree()
     })
   },
+  mounted () {
+  },
   methods: {
     async initDatabase () {
       if (!window.indexedDB) {
@@ -95,12 +100,12 @@ export default {
           }
         })
         let tx = db.transaction('trees', 'readwrite')
-        let tree = await db.get('trees', this.uuid)
-        if (!tree) {
+        let data = await db.get('trees', this.uuid)
+        if (!data) {
           this.initTree()
-          await db.put('trees', this.tree, this.uuid)
+          await db.put('trees', {tree: this.tree, treeState: this.treeState}, this.uuid)
         } else {
-          this.initTree(tree)
+          this.initTree(data)
         }
         // clean old trees
         let keys = await db.getAllKeys('trees')
@@ -120,9 +125,9 @@ export default {
       this.timers.updateDatabase = setTimeout(async () => {
         let db = this.db
         let tx = db.transaction('trees', 'readwrite')
-        await db.put('trees', this.tree, this.uuid)
+        await db.put('trees', {tree: this.tree, treeState: this.treeState}, this.uuid)
         await tx.done
-      }, 10000)
+      }, 3000)
     },
     async cleanCurrentDatabase () {
       let db = this.db
@@ -144,28 +149,26 @@ export default {
       }
       await tx.done
     },
-    initTree (tree) {
-      if (tree) {
-        this.analyser = new JsonAnalyser({tree})
-        this.tree = tree
+    initTree (data) {
+      if (data) {
+        this.analyser = new JsonAnalyser({tree:data.tree})
+        this.tree = data.tree
+        this.treeState = data.treeState
       } else {
         this.analyser = new JsonAnalyser()
-        this.updateTree(this.data)
+        this.genTree(this.data)
       }
     },
-    updateTree (data) {
+    genTree (data) {
       let {structTree, tree} = this.analyser.analysis(data)
       this.goThrough(tree, _ => {
-        _.status={
-          open:false
-        }
+        this.$set(_,'status',{open:false})
       })
       this.tree = tree
     },
-    onTreeUpdate (change, value) {
-      this.$emit('update', change, value)
+    onTreeUpdate (change, value, origin) {
+      this.$emit('update', change, value, origin)
       this.updateDatabase()
-      let tree = this.$refs.tree
     },
     goThrough(root, func) {
       func(root)

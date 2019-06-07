@@ -15,6 +15,7 @@
           :tree="child"
           :level="level+1"
           :treeState="treeState"
+          :nodes="nodes"
           @update="onupdate"
         />
       </div>
@@ -55,6 +56,7 @@
             :tree="child"
             :level="level+1"
             :treeState="treeState"
+            :nodes="nodes"
             @update="onupdate"
           />
         </div>
@@ -95,9 +97,10 @@ export default {
   name: 'ac-table-tree-item',
   components: {icons},
   props: {
-    tree: { type: Object, default () { return {} } },
+    tree: { type: Object, required: true },
     level: { type: Number, default:0 },
-    treeState: { type: Object, default () { return {} } },
+    treeState: { type: Object, required: true },
+    nodes: { type: Object, required: true },
   },
   data () {
     return {

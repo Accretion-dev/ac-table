@@ -1,5 +1,5 @@
 <template>
-  <div :class="`${prefixCls}`">
+  <div :class="`${prefixCls}`"  @keydown.prevent="keydown">
     <div :class="`${prefixCls}-tools`">
       <span
         :class="`${prefixCls}-tools-button`"
@@ -11,7 +11,7 @@
       > - </span>
     </div>
     <div :class="`${prefixCls}-content`">
-      <ac-tree-item :tree="tree" :treeState="treeState" @update="onupdate"/>
+      <ac-tree-item :tree="tree" :treeState="treeState" :nodes="nodes" @update="onupdate"/>
     </div>
   </div>
 </template>
@@ -24,24 +24,46 @@ export default {
   name: 'ac-table-tree',
   components: {acTreeItem},
   props: {
-    tree: { type: Object, default () { return {} } }
+    tree: { type: Object, required: true },
+    treeState: { type: Object, required: true },
   },
   data () {
     return {
       prefixCls,
-      treeState: {
-        selected: ''
-      },
+      nodes : { },
     }
+  },
+  watch:{
   },
   computed: {
   },
+  created() {
+    this.$watch('treeState.selected', (newObj, oldObj) => {
+      if (oldObj&&this.nodes[oldObj]) {
+        this.nodes[oldObj].updateSelected(false)
+      }
+      if (newObj&&this.nodes[newObj]&&!this.nodes[newObj].tree.root) {
+        this.nodes[newObj].updateSelected(true)
+      }
+    })
+  },
+  mounted () {
+    let selected = this.treeState.selected
+    if (selected) {
+      if (this.nodes[selected]&&!this.nodes[selected].tree.root) {
+        this.nodes[selected].updateSelected(true)
+      }
+    }
+  },
   methods: {
-    onupdate (change, value) {
-      //if (change.treeState&&change.treeState.selected) {
-      //  this.$set(this.treeState, 'selected', change.treeState.selected)
-      //}
-      this.$emit('update', change, value)
+    keydown (event) {
+      console.log(event)
+    },
+    onupdate (change, value, origin) {
+      this.$emit('update', change, value, origin)
+      if (origin) {
+        this.treeState.selected = origin.tree.path
+      }
     },
     goThrough(root, func) {
       func(root)
@@ -65,18 +87,15 @@ export default {
       if (status) {
         this.doForAllSubTree(root, _=> {
           if (_.tree.root) return
-          if (_.tree.status.open===false) {
-            _.updateFold(status)
-          }
+          _.updateFold(status)
         })
       } else {
         this.doForAllSubTree(root, _=> {
           if (_.tree.root) return
-          if (_.tree.status.open===true) {
-            _.updateFold(status)
-          }
+          _.updateFold(status)
         })
       }
+      this.$emit('update')
     }
   }
 }

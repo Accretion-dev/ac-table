@@ -38,6 +38,12 @@
       <span>
         {{ data.length }}
       </span>
+      <span :class="`${prefixCls}-status-message`"
+            :style="{'font-color':`${messageColor[message.type]}`}"
+            v-show="message.show"
+      >
+        {{message.text}}
+      </span>
     </div>
   </div>
 </template>
@@ -74,6 +80,16 @@ export default {
       sidebar: 'tree',
       timers: {
         updateDatabase: null,
+        message: null,
+      },
+      message: {
+        text: '',
+        type: 'info',
+        show: false
+      },
+      messageColor: {
+        'info': 'blue',
+        'error': 'red',
       }
     }
   },
@@ -127,6 +143,7 @@ export default {
         let tx = db.transaction('trees', 'readwrite')
         await db.put('trees', {tree: this.tree, treeState: this.treeState}, this.uuid)
         await tx.done
+        this.statusBarInfo('save tree state', 'info')
       }, 3000)
     },
     async cleanCurrentDatabase () {
@@ -181,6 +198,16 @@ export default {
     changeSidebar(event) {
       let target = event.target
       this.sidebar = target.getAttribute('name')
+    },
+    statusBarInfo(text, type, timeout) {
+      if (!timeout) timeout = 3000
+      if (type) this.message.type = type
+      this.message.text = text
+      clearTimeout(this.timers.message)
+      this.message.show = true
+      this.timers.message = setTimeout(() => {
+        this.message.show = false
+      }, timeout)
     }
   }
 }
@@ -260,6 +287,10 @@ $fontFamily: "'Courier New', Courier, monospace";
   width:  3em;
   height: 3em;
   background: #bffff9;
+}
+.#{$pre}-status-message {
+  position: absolute;
+  right:  0;
 }
 
 .ac-unselectable {

@@ -106,6 +106,21 @@ export default {
       }
     }
   },
+  watch: {
+    sidebar (value) {
+      let node
+      if (value==='tree') {
+        node = this.$refs.tree
+      } else if (value==='show') {
+        node = this.$refs.show
+      }
+      if (node) {
+        setTimeout(() => {
+          node.$el.focus()
+        },0)
+      }
+    }
+  },
   computed: {
   },
   created () {
@@ -243,7 +258,7 @@ export default {
       this.showFields.splice(index, 1)
     },
     onTreeUpdate (change, value, origin) {
-      if (change.status&&change.status.show!==undefined) {
+      if (change&&change.status&&change.status.show!==undefined) {
         if (change.status.show) {
           this.addShow(origin.tree)
         } else {

@@ -1,5 +1,5 @@
 <template>
-  <div :class="`${prefixCls}`">
+  <div :class="`${prefixCls}`" tabindex="0">
     <ac-tree-show-item v-for="data of show"
       :key="`${data.extra?'e__':'f__'}${data.path}`"
       :data="data"
@@ -38,5 +38,6 @@ export default {
 <style lang="scss">
 $pre: ac-tree-show;
 .#{$pre} {
+  outline:none;
 }
 </style>

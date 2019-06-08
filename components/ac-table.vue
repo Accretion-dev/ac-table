@@ -18,18 +18,28 @@
       <template v-else>
         <div :class="`${prefixCls}-sidebar`">
           <div :class="`${prefixCls}-sidebar-tab`" @click="changeSidebar">
-            <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:sidebar==='tree'}"><span class="ac-unselectable" style="pointer-events:none;">tree</span></span>
-            <span name="show" :class="{[`${prefixCls}-sidebar-tab-selected`]:sidebar==='show'}"><span class="ac-unselectable" style="pointer-events:none;">show</span></span>
+            <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:sidebar==='tree'}">
+              <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">tree</span>
+            </span>
+            <span name="show" :class="{[`${prefixCls}-sidebar-tab-selected`]:sidebar==='show'}">
+              <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">show</span>
+            </span>
+            <span name="extra" :class="{[`${prefixCls}-sidebar-tab-selected`]:sidebar==='extra'}">
+              <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">extra</span>
+            </span>
           </div>
-          <keep-alive>
-            <ac-tree ref="tree"
-              :class="`${prefixCls}-sidebar-tree`"
-              :tree="tree"
-              :treeState="treeState"
-              @update="onTreeUpdate"
-              v-if="sidebar==='tree'"
-            />
-          </keep-alive>
+          <ac-tree ref="tree"
+            :class="`${prefixCls}-sidebar-tree`"
+            :tree="tree"
+            :treeState="treeState"
+            @update="onTreeUpdate"
+            v-show="sidebar==='tree'"
+          />
+          <ac-tree-show ref="show"
+            :class="`${prefixCls}-sidebar-tree`"
+            :show="showFields"
+            v-show="sidebar==='show'"
+          />
         </div>
         <div :class="`${prefixCls}-content`"> </div>
       </template>
@@ -53,6 +63,7 @@ const prefixCls = 'ac-table'
 import {JsonAnalyser} from '../utils/jsonAnalyser.js'
 import { openDB, deleteDB, wrap, unwrap } from 'idb'
 import acTree from './ac-tree'
+import acTreeShow from './ac-tree-show'
 
 /*
 TODO:
@@ -64,7 +75,7 @@ TODO:
 
 export default {
   name: 'ac-table',
-  components: {acTree},
+  components: {acTree, acTreeShow},
   props: {
     data: { type: Array, default () { return [] } },
     uuid: { type: String, default () { return (new Date()).toISOString() }},
@@ -77,6 +88,8 @@ export default {
       analyser: null,
       tree: {root: true, status:{open:false}},
       treeState: { selected: null },
+      extraFields: [],
+      showFields:[],
       sidebar: 'tree',
       timers: {
         updateDatabase: null,
@@ -105,9 +118,6 @@ export default {
   mounted () {
   },
   methods: {
-    keydown (event) {
-      console.log(event)
-    },
     async initDatabase () {
       if (!window.indexedDB) {
         throw Error('no support for indexedDB')
@@ -122,7 +132,13 @@ export default {
         let data = await db.get('trees', this.uuid)
         if (!data) {
           this.initTree()
-          await db.put('trees', {tree: this.tree, treeState: this.treeState}, this.uuid)
+          await db.put('trees', {
+            tree: this.tree,
+            treeState: this.treeState,
+            extraFields:this.extraFields,
+            showFields: this.showFields,
+            sidebar: this.sidebar,
+          }, this.uuid)
         } else {
           this.initTree(data)
         }
@@ -144,7 +160,13 @@ export default {
       this.timers.updateDatabase = setTimeout(async () => {
         let db = this.db
         let tx = db.transaction('trees', 'readwrite')
-        await db.put('trees', {tree: this.tree, treeState: this.treeState}, this.uuid)
+        await db.put('trees', {
+          tree: this.tree,
+          treeState: this.treeState,
+          extraFields:this.extraFields,
+          showFields: this.showFields,
+          sidebar: this.sidebar,
+        }, this.uuid)
         await tx.done
         this.statusBarInfo('save tree state', 'info')
       }, 3000)
@@ -174,6 +196,9 @@ export default {
         this.analyser = new JsonAnalyser({tree:data.tree})
         this.tree = data.tree
         this.treeState = data.treeState
+        this.extraFields = data.extraFields
+        this.showFields = data.showFields
+        this.sidebar = data.sidebar
       } else {
         this.analyser = new JsonAnalyser()
         this.genTree(this.data)
@@ -182,9 +207,37 @@ export default {
     genTree (data) {
       let {structTree, tree} = this.analyser.analysis(data)
       this.goThrough(tree, _ => {
-        this.$set(_,'status',{open:false})
+        this.$set(_,'status',{
+          open:false,
+          show:false
+        })
+      })
+      tree.children.forEach(_ => {
+        this.addShow(_)
       })
       this.tree = tree
+    },
+    addShow(tree, extra) {
+      tree.status.show = true
+      this.showFields.push({
+        name: tree.name,
+        path: tree.path, // uid for extraFields
+        extra,
+        status: {
+          show: true
+        },
+      })
+    },
+    removeShow(obj) {
+      let index = this.showFields.findIndex(_ => _===obj)
+      let tree
+      if (obj.extra) {
+        tree = this.extraFields.find(_ => _.path === obj.path)
+      } else {
+        tree = this.$refs.tree.nodes[obj.path].tree
+      }
+      tree.status.show = false
+      this.showFields.splice(index, 1)
     },
     onTreeUpdate (change, value, origin) {
       this.$emit('update', change, value, origin)

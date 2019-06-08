@@ -11,7 +11,7 @@
         <ac-tree-item
            ref="subtrees"
            v-for="(child,index) of tree.children"
-          :keys="child.path"
+          :key="child.path"
           :index="index"
           :siblingCount="tree.children.length"
           :tree="child"
@@ -41,7 +41,15 @@
             <span v-else>
               <span class="ac-unselectable">&nbsp;</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">&nbsp;</span>
             </span>
-            <span :class="[`${prefixCls}-name`,'ac-unselectable']">{{tree.name}}</span>
+            <span ref="name" :class="{
+                [`${prefixCls}-name`]:true,
+                ['ac-unselectable']:true,
+                [`${prefixCls}-shown`]: shown,
+                [`${prefixCls}-sub-shown`]: subshown,
+              }"
+            >
+              {{tree.name}}
+            </span>
             <pre ref="comments" :class="`${prefixCls}-comments`">{{comments}}</pre>
           </span>
         </div>
@@ -54,7 +62,7 @@
           <ac-tree-item
              ref="subtrees"
              v-for="(child,index) of tree.children"
-            :keys="child.path"
+            :key="child.path"
             :index="index"
             :siblingCount="tree.children.length"
             :tree="child"
@@ -74,7 +82,15 @@
             <span v-else>
               <span class="ac-unselectable">&nbsp;</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">&nbsp;</span>
             </span>
-            <span :class="[`${prefixCls}-name`,'ac-unselectable']">{{tree.name}}</span>
+            <span ref="name" :class="{
+                [`${prefixCls}-name`]:true,
+                'ac-unselectable':true,
+                [`${prefixCls}-shown`]: shown,
+                [`${prefixCls}-sub-shown`]: subshown,
+              }"
+            >
+              {{tree.name}}
+            </span>
             <pre ref="comments" :class="`${prefixCls}-comments`">{{comments}}</pre>
           </span>
         </div>
@@ -121,6 +137,17 @@ export default {
     }
   },
   computed: {
+    shown () {
+      return this.tree.status.show
+    },
+    subshown () {
+      if (this.tree.status.show) return false
+      if (this.$refs.subtree&&this.$refs.subtree.length) {
+        return !!this.$refs.subtree.find(_ => _.shown||_.subshown)
+      } else {
+        return false
+      }
+    },
     comments () {
       let result = [`|${this.tree.path}`]
       if (this.tree.count) {
@@ -222,6 +249,13 @@ export default {
 
 <style lang="scss">
 $pre: ac-table-tree-item;
+.#{$pre}-shown {
+  color: green;
+  font-weight: bolder;
+}
+.#{$pre}-sub-shown {
+  color: gray;
+}
 .#{$pre}-selected {
   background: #d8ffd775;
 }
@@ -269,6 +303,5 @@ $pre: ac-table-tree-item;
   left: 100%;
   display: none;
 }
-
 
 </style>

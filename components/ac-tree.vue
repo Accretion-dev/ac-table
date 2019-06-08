@@ -167,12 +167,12 @@ export default {
       if (!root) root = this.$children.find(_ => _.$options.name === 'ac-table-tree-item')
       if (status) {
         this.doForAllSubTree(root, _=> {
-          if (_.tree.root) return
+          if (_.tree.root||!_.tree.children) return
           _.onlyUpdateFold(status)
         })
       } else {
         this.doForAllSubTree(root, _=> {
-          if (_.tree.root) return
+          if (_.tree.root||!_.tree.children) return
           _.onlyUpdateFold(status)
         })
       }

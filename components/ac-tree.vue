@@ -139,18 +139,23 @@ export default {
     },
     changeSelect (move) {
       let node = this.nodes[this.treeState.selected]
-      if (!node) return
+      if (!node) {
+        this.treeState.selected = this.tree.children[0].path
+        return
+      }
       if (move==='up') { // up
         this.selectUP(node)
+        this.$emit('update', {storeUpdate: ['treeState']})
       } else if (move==='down') { // down
         this.selectDOWN(node)
+        this.$emit('update', {storeUpdate: ['treeState']})
       }
     },
     onupdate (change, value, origin) {
-      this.$emit('update', change, value, origin)
       if (origin) {
         this.treeState.selected = origin.tree.path
       }
+      this.$emit('update', change, value, origin)
     },
     goThrough(root, func) {
       func(root)

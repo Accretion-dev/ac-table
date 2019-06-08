@@ -18,28 +18,29 @@
       <template v-else>
         <div :class="`${prefixCls}-sidebar`">
           <div :class="`${prefixCls}-sidebar-tab`" @click="changeSidebar">
-            <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:sidebar==='tree'}">
+            <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
               <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">tree</span>
             </span>
-            <span name="show" :class="{[`${prefixCls}-sidebar-tab-selected`]:sidebar==='show'}">
+            <span name="show" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='show'}">
               <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">show</span>
             </span>
-            <span name="extra" :class="{[`${prefixCls}-sidebar-tab-selected`]:sidebar==='extra'}">
+            <span name="extra" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='extra'}">
               <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">extra</span>
             </span>
           </div>
           <ac-tree ref="tree"
-            :class="`${prefixCls}-sidebar-tree`"
-            :tree="tree"
-            :treeState="treeState"
+            :tree="store.tree"
+            :treeState="store.treeState"
             @update="onTreeUpdate"
-            v-show="sidebar==='tree'"
+            v-show="store.status.sidebar==='tree'"
           />
           <ac-tree-show ref="show"
-            :class="`${prefixCls}-sidebar-tree`"
-            :show="showFields"
-            v-show="sidebar==='show'"
+            :show="store.showFields"
+            v-show="store.status.sidebar==='show'"
           />
+        </div>
+        <div :class="`${prefixCls}-resizer`">
+          <span style="width:1px; background:gray; margin-right:2px;"/>
         </div>
         <div :class="`${prefixCls}-content`"> </div>
       </template>
@@ -78,7 +79,7 @@ export default {
   components: {acTree, acTreeShow},
   props: {
     data: { type: Array, default () { return [] } },
-    uuid: { type: String, default () { return (new Date()).toISOString() }},
+    uid: { type: String, default () { return (new Date()).toISOString() }},
   },
   data () {
     return {
@@ -86,13 +87,20 @@ export default {
       db: null,
       loading: true,
       analyser: null,
-      tree: {root: true, status:{open:false}},
-      treeState: { selected: null },
-      extraFields: [],
-      showFields:[],
-      sidebar: 'tree',
+      store: {
+        tree: {root: true, status:{open:false}},
+        treeState: { selected: null },
+        extraFields: [],
+        showFields:[],
+        status: {
+          sidebarSize: null,
+          sidebar: 'tree',
+        },
+      },
       timers: {
-        updateDatabase: null,
+        updateDatabase: {
+          all: null
+        },
         message: null,
       },
       message: {
@@ -107,7 +115,11 @@ export default {
     }
   },
   watch: {
-    sidebar (value) {
+  },
+  computed: {
+  },
+  created () {
+    let watcher = (value) => {
       let node
       if (value==='tree') {
         node = this.$refs.tree
@@ -120,10 +132,8 @@ export default {
         },0)
       }
     }
-  },
-  computed: {
-  },
-  created () {
+    this.$watch('store.status.sidebar', watcher)
+
     this.initDatabase().catch(error => {// in case of error, do not use database
       console.error(error)
       this.loading = false
@@ -133,87 +143,110 @@ export default {
   mounted () {
   },
   methods: {
+    // about database and init
+    async saveState(key, tx) {
+      let keys
+      if (key) {
+        keys = [key]
+      } else {
+        keys = Object.keys(this.store)
+        await tx.objectStore('uids').put(this.uid, this.uid)
+      }
+      for (let key of keys) {
+        await tx.objectStore(key).put(this.store[key], this.uid)
+      }
+    },
     async initDatabase () {
       if (!window.indexedDB) {
         throw Error('no support for indexedDB')
       } else {
+        let keys = Object.keys(this.store)
         let db = await openDB('ac-table', 1, {
           upgrade (db, oldVersion, newVersion, transaction) {
-            //db.createObjectStore('trees', { keyPath: 'uuid' })
-            db.createObjectStore('trees')
+            //db.createObjectStore('trees', { keyPath: 'uid' })
+            db.createObjectStore('uids')
+            for (let key of keys) {
+              db.createObjectStore(key)
+            }
           }
         })
-        let tx = db.transaction('trees', 'readwrite')
-        let data = await db.get('trees', this.uuid)
-        if (!data) {
+        let tx = db.transaction(['uids', ...keys], 'readwrite')
+        let uidsStore = tx.objectStore('uids')
+        let data = await uidsStore.get(this.uid)
+        if (!data) { // gen new tree
+          this.statusBarInfo(`gen new tree`, 'info')
           this.initTree()
-          await db.put('trees', {
-            tree: this.tree,
-            treeState: this.treeState,
-            extraFields:this.extraFields,
-            showFields: this.showFields,
-            sidebar: this.sidebar,
-          }, this.uuid)
+          await this.saveState(null, tx)
         } else {
+          this.statusBarInfo(`use old tree`, 'info')
+          data = {}
+          for (let key of keys) {
+            data[key] = await tx.objectStore(key).get(this.uid)
+          }
           this.initTree(data)
         }
         // clean old trees
-        let keys = await db.getAllKeys('trees')
+        let uids = await uidsStore.getAllKeys('uids')
         let now = new Date()
-        keys = keys.filter(_ => !isNaN(new Date(_)))
-        keys = keys.slice(10) // leave the latest 3 random trees
-        for (let each of keys) {
-          await db.delete('trees', each)
+        uids = uids.filter(_ => !isNaN(new Date(_)))
+        uids = uids.slice(3) // leave the latest 3 random trees
+        for (let key of keys) {
+          let store = tx.objectStore(key)
+          for (let each of uids) {
+            await stores.delete(each)
+          }
         }
-        await tx.done
         this.db = db
         this.loading = false
       }
     },
-    updateDatabase () {
-      clearTimeout(this.timers.updateDatabase)
-      this.timers.updateDatabase = setTimeout(async () => {
-        let db = this.db
-        let tx = db.transaction('trees', 'readwrite')
-        await db.put('trees', {
-          tree: this.tree,
-          treeState: this.treeState,
-          extraFields:this.extraFields,
-          showFields: this.showFields,
-          sidebar: this.sidebar,
-        }, this.uuid)
-        await tx.done
-        this.statusBarInfo('save tree state', 'info')
-      }, 3000)
+    updateDatabase (fields) {
+      let keys = Object.keys(this.store)
+      let timer = ['uids', ...keys]
+      if (fields) timer = fields
+      for (let field of fields) {
+        clearTimeout(this.timers.updateDatabase[field])
+        this.timers.updateDatabase[field] = setTimeout(async () => {
+          let db = this.db
+          let tx = db.transaction(field, 'readwrite')
+          await this.saveState(field, tx)
+          await tx.done
+          //this.statusBarInfo(`save ${field}`, 'info')
+          console.log(`save ${field}`)
+        }, 1000)
+      }
     },
-    async cleanCurrentDatabase () {
+    async cleanCurrentDatabase (field) {
+      let keys = Object.keys(this.store)
       let db = this.db
-      let tx = db.transaction('trees', 'readwrite')
-      let exists = await db.get('trees', this.uuid)
+      let tx = db.transaction(['uids',...keys], 'readwrite')
+      let uidsStore = tx.objectStore('uids')
+      let exists = await uidsStore.get(this.uid)
       if (exists) {
-        await db.delete('trees', this.uuid)
-        console.log('clean current database')
+        for (let key of ['uids', ...keys]) {
+          await tx.objectStore(key).delete(this.uid)
+        }
       }
       await tx.done
     },
     async cleanAllDatabase () {
+      let keys = Object.keys(this.store)
       let db = this.db
-      let tx = db.transaction('trees', 'readwrite')
-      let keys = await db.getAllKeys('trees')
-      for (let each of keys) {
-        await db.delete('trees', each)
-        console.log('clean all database')
+      let tx = db.transaction(['uids',...keys], 'readwrite')
+      let uidsStore = tx.objectStore('uids')
+      let uids = await uidsStore.getAllKeys()
+      for (let key of Object.keys(stores)) {
+        for (let uid of uids) {
+          await tx.objectStore(key).delete(uid)
+        }
       }
       await tx.done
+      console.log('clean all database')
     },
     initTree (data) {
       if (data) {
         this.analyser = new JsonAnalyser({tree:data.tree})
-        this.tree = data.tree
-        this.treeState = data.treeState
-        this.extraFields = data.extraFields
-        this.showFields = data.showFields
-        this.sidebar = data.sidebar
+        Object.assign(this.store, data)
       } else {
         this.analyser = new JsonAnalyser()
         this.genTree(this.data)
@@ -230,8 +263,9 @@ export default {
       tree.children.forEach(_ => {
         this.addShow(_)
       })
-      this.tree = tree
+      this.store.tree = tree
     },
+    // about show
     addShow(tree, extra) {
       tree.status.show = true
       let toAdd = {
@@ -244,10 +278,10 @@ export default {
           show: true
         },
       }
-      this.showFields.push(toAdd)
+      this.store.showFields.push(toAdd)
     },
     removeShow(obj) {
-      let index = this.showFields.findIndex(_ => _===obj)
+      let index = this.store.showFields.findIndex(_ => _===obj)
       let tree
       if (obj.extra) {
         tree = this.extraFields.find(_ => _.path === obj.path)
@@ -255,20 +289,25 @@ export default {
         tree = this.$refs.tree.nodes[obj.path].tree
       }
       tree.status.show = false
-      this.showFields.splice(index, 1)
+      this.store.showFields.splice(index, 1)
     },
+    // others
     onTreeUpdate (change, value, origin) {
-      if (change&&change.status&&change.status.show!==undefined) {
+      if (change&&change.storeUpdate) {
+        this.updateDatabase(change.storeUpdate)
+      } else if (change&&change.status&&change.status.show!==undefined) {
         if (change.status.show) {
           this.addShow(origin.tree)
         } else {
-          let obj = this.showFields.find(_ => _.path===origin.tree.path && !_.extra)
+          let obj = this.store.showFields.find(_ => _.path===origin.tree.path && !_.extra)
           if (obj) {
             this.removeShow(obj)
           }
         }
+        this.updateDatabase(['tree', 'showFields'])
+      } else { // update selected
+        this.updateDatabase(['tree', 'treeState'])
       }
-      this.updateDatabase()
     },
     goThrough(root, func) {
       func(root)
@@ -280,7 +319,8 @@ export default {
     },
     changeSidebar(event) {
       let target = event.target
-      this.sidebar = target.getAttribute('name')
+      this.store.status.sidebar = target.getAttribute('name')
+      this.updateDatabase(['status'])
     },
     statusBarInfo(text, type, timeout) {
       if (!timeout) timeout = 3000
@@ -328,6 +368,10 @@ $fontFamily: "'Courier New', Courier, monospace";
   display: flex;
   flex-direction: column;
 }
+.#{$pre}-resizer {
+  cursor: ew-resize;
+  display: flex;
+}
 .#{$pre}-sidebar-tab {
   background: #f7faff;
   display: flex;
@@ -345,12 +389,8 @@ $fontFamily: "'Courier New', Courier, monospace";
 .#{$pre}-sidebar-tab span:hover{
   background: #d8ffd7;
 }
-.#{$pre}-sidebar-tree {
-  flex:1;
-  margin: 2px;
-}
 .#{$pre}-content {
-  background: #8bc34a;
+  //background: #8bc34a;
   flex: 1;
 }
 .#{$pre}-footer {

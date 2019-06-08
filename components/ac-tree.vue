@@ -83,6 +83,8 @@ export default {
             this.foldSelected(true); break
           case 'ArrowLeft':
             this.foldSelected(false); break
+          case ' ':
+            this.foldSelected(); break
           case 'ArrowUp':
             this.changeSelect('up'); break
           case 'ArrowDown':

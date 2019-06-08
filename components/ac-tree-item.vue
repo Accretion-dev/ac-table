@@ -176,6 +176,7 @@ export default {
       this.tree.status.open = value
     },
     updateFold (value) {
+      if (value===undefined) value = !this.tree.status.open
       if (this.tree.status.open!=value) {
         this.tree.status.open = value
         this.$emit('update', {status:{open:this.tree.status.open}, treeState:{selected: this.tree.path}}, this.tree, this)

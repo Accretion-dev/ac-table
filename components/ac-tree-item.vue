@@ -45,7 +45,6 @@
                 [`${prefixCls}-name`]:true,
                 ['ac-unselectable']:true,
                 [`${prefixCls}-shown`]: shown,
-                [`${prefixCls}-sub-shown`]: subshown,
               }"
             >
               {{tree.name}}
@@ -86,7 +85,6 @@
                 [`${prefixCls}-name`]:true,
                 'ac-unselectable':true,
                 [`${prefixCls}-shown`]: shown,
-                [`${prefixCls}-sub-shown`]: subshown,
               }"
             >
               {{tree.name}}
@@ -137,14 +135,6 @@ export default {
   computed: {
     shown () {
       return this.tree.status.show
-    },
-    subshown () {
-      if (this.tree.status.show) return false
-      if (this.$refs.subtree&&this.$refs.subtree.length) {
-        return !!this.$refs.subtree.find(_ => _.shown||_.subshown)
-      } else {
-        return false
-      }
     },
     comments () {
       let result = [`|${this.tree.path}`]
@@ -254,9 +244,6 @@ $pre: ac-table-tree-item;
 .#{$pre}-shown {
   color: green;
   font-weight: bolder;
-}
-.#{$pre}-sub-shown {
-  color: gray;
 }
 .#{$pre}-selected {
   background: #d8ffd775;

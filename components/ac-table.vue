@@ -219,14 +219,17 @@ export default {
     },
     addShow(tree, extra) {
       tree.status.show = true
-      this.showFields.push({
+      let toAdd = {
         name: tree.name,
         path: tree.path, // uid for extraFields
+        type: tree.type,
+        arrayType: tree.arrayType,
         extra,
         status: {
           show: true
         },
-      })
+      }
+      this.showFields.push(toAdd)
     },
     removeShow(obj) {
       let index = this.showFields.findIndex(_ => _===obj)
@@ -240,7 +243,16 @@ export default {
       this.showFields.splice(index, 1)
     },
     onTreeUpdate (change, value, origin) {
-      this.$emit('update', change, value, origin)
+      if (change.status&&change.status.show!==undefined) {
+        if (change.status.show) {
+          this.addShow(origin.tree)
+        } else {
+          let obj = this.showFields.find(_ => _.path===origin.tree.path && !_.extra)
+          if (obj) {
+            this.removeShow(obj)
+          }
+        }
+      }
       this.updateDatabase()
     },
     goThrough(root, func) {

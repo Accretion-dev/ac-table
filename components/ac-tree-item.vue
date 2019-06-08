@@ -131,9 +131,7 @@ export default {
         folder: false,
         open: false
       },
-      childMap: {
-
-      },
+      childMap: { },
     }
   },
   computed: {
@@ -198,6 +196,10 @@ export default {
           this.$emit('update', {status:{open:this.tree.status.open}, treeState:{selected: this.tree.path}}, this.tree, this)
         }
       }
+    },
+    updateShow () {
+      let status = !this.tree.status.show
+      this.$emit('update', {status:{show:status}}, this.tree, this)
     },
     updateSelected (value) {
       if (value) {

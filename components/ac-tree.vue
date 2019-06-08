@@ -87,6 +87,10 @@ export default {
             this.changeSelect('up'); break
           case 'ArrowDown':
             this.changeSelect('down'); break
+          case 's':
+            let node = this.nodes[this.treeState.selected]
+            if (node) node.updateShow()
+            break
         }
       }
     },

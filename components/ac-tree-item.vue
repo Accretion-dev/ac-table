@@ -9,9 +9,11 @@
     <template v-if="tree.root">
       <div ref="subtree" v-if="!!tree.children" :class="`${prefixCls}-subtree`">
         <ac-tree-item
+           ref="subtrees"
            v-for="(child,index) of tree.children"
           :keys="child.path"
           :index="index"
+          :siblingCount="tree.children.length"
           :tree="child"
           :level="level+1"
           :treeState="treeState"
@@ -22,7 +24,7 @@
     </template>
     <template v-else>
       <template v-if="tree.children">  <!--not root but have children-->
-        <div :class="`${prefixCls}-content`">
+        <div ref="content" :class="`${prefixCls}-content`">
           <span
             ref='folder'
             :class="[`${prefixCls}-folder`, 'ac-unselectable']"
@@ -50,9 +52,11 @@
                @mouseleave="leaveBody"
           />
           <ac-tree-item
+             ref="subtrees"
              v-for="(child,index) of tree.children"
             :keys="child.path"
             :index="index"
+            :siblingCount="tree.children.length"
             :tree="child"
             :level="level+1"
             :treeState="treeState"
@@ -62,7 +66,7 @@
         </div>
       </template>
       <template v-else> <!--not root and not have children-->
-        <div :class="`${prefixCls}-content`">
+        <div ref="content" :class="`${prefixCls}-content`">
           <span :class="`${prefixCls}-title`" @mouseover="overBody" @mouseleave="leaveBody">
             <span v-if="icon.array">
               <span class="ac-unselectable">[</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">]</span>
@@ -101,6 +105,8 @@ export default {
     level: { type: Number, default:0 },
     treeState: { type: Object, required: true },
     nodes: { type: Object, required: true },
+    index: { type: Number },
+    siblingCount: { type: Number },
   },
   data () {
     return {
@@ -108,7 +114,10 @@ export default {
       status: {
         folder: false,
         open: false
-      }
+      },
+      childMap: {
+
+      },
     }
   },
   computed: {
@@ -138,20 +147,39 @@ export default {
     }
   },
   mounted () {
+    if (this.$refs.subtrees) {
+      for (let child of this.$refs.subtrees) {
+        this.childMap[child.index] = child
+      }
+    }
   },
   created () {
     this.nodes[this.tree.path] = this
   },
   methods: {
-    updateFold (value) {
-      console.log('update fold to', value)
+    onlyUpdateFold (value) {
       this.tree.status.open = value
+    },
+    updateFold (value) {
+      if (this.tree.status.open!=value) {
+        this.tree.status.open = value
+        this.$emit('update', {status:{open:this.tree.status.open}, treeState:{selected: this.tree.path}}, this.tree, this)
+      } else if (!this.tree.status.open && !value) {
+        if (!this.tree.root&&!this.$parent.tree.root) {
+          this.$parent.updateFold(false)
+        } else {
+          this.$emit('update', {status:{open:this.tree.status.open}, treeState:{selected: this.tree.path}}, this.tree, this)
+        }
+      }
     },
     updateSelected (value) {
       if (value) {
         this.$el.classList.add(`${prefixCls}-selected`)
       } else {
         this.$el.classList.remove(`${prefixCls}-selected`)
+      }
+      if (this.$refs.content) {
+        this.$refs.content.scrollIntoViewIfNeeded()
       }
     },
     overBody (event) {
@@ -177,9 +205,7 @@ export default {
     onclick (event) {
       const goodType = ['array', 'object', 'mixed']
       if (goodType.includes(this.tree.type)) {
-        this.tree.status.open = !this.tree.status.open
-        this.updateFold(this.tree.status.open)
-        this.$emit('update', {status:{open:this.tree.status.open}, treeState:{selected: this.tree.path}}, this.tree, this)
+        this.updateFold(!this.tree.status.open)
       } else {
         this.$emit('update', {treeState:{selected: this.tree.path}}, this.tree, this)
       }

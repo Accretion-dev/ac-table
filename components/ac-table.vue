@@ -105,6 +105,9 @@ export default {
   mounted () {
   },
   methods: {
+    keydown (event) {
+      console.log(event)
+    },
     async initDatabase () {
       if (!window.indexedDB) {
         throw Error('no support for indexedDB')

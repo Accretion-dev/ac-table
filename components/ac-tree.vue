@@ -1,5 +1,7 @@
 <template>
-  <div :class="`${prefixCls}`"  @keydown.prevent="keydown">
+  <div :class="`${prefixCls}`"
+       tabindex="0"
+       @keydown.prevent="keydown">
     <div :class="`${prefixCls}-tools`">
       <span
         :class="`${prefixCls}-tools-button`"
@@ -11,7 +13,7 @@
       > - </span>
     </div>
     <div :class="`${prefixCls}-content`">
-      <ac-tree-item :tree="tree" :treeState="treeState" :nodes="nodes" @update="onupdate"/>
+      <ac-tree-item ref="tree-root" :tree="tree" :treeState="treeState" :nodes="nodes" @update="onupdate"/>
     </div>
   </div>
 </template>
@@ -38,14 +40,7 @@ export default {
   computed: {
   },
   created() {
-    this.$watch('treeState.selected', (newObj, oldObj) => {
-      if (oldObj&&this.nodes[oldObj]) {
-        this.nodes[oldObj].updateSelected(false)
-      }
-      if (newObj&&this.nodes[newObj]&&!this.nodes[newObj].tree.root) {
-        this.nodes[newObj].updateSelected(true)
-      }
-    })
+    this.$watch('treeState.selected', this.selectNode)
   },
   mounted () {
     let selected = this.treeState.selected
@@ -56,8 +51,94 @@ export default {
     }
   },
   methods: {
+    selectNode(newObj, oldObj) {
+      if (oldObj&&this.nodes[oldObj]) {
+        this.nodes[oldObj].updateSelected(false)
+      }
+      if (newObj&&this.nodes[newObj]&&!this.nodes[newObj].tree.root) {
+        this.nodes[newObj].updateSelected(true)
+      }
+    },
+    foldSelected(status) {
+      if (this.treeState.selected) {
+        let node = this.nodes[this.treeState.selected]
+        if (node) node.updateFold(status)
+      }
+    },
     keydown (event) {
-      console.log(event)
+      if (event.shiftKey) {
+        let node = this.nodes[this.treeState.selected]
+        if (node) {
+          switch (event.key) {
+            case 'ArrowRight':
+              this.onChangeAllFold(true, node); break
+            case 'ArrowLeft':
+              this.onChangeAllFold(false, node); break
+          }
+        }
+
+      } else {
+        switch (event.key) {
+          case 'ArrowRight':
+            this.foldSelected(true); break
+          case 'ArrowLeft':
+            this.foldSelected(false); break
+          case 'ArrowUp':
+            this.changeSelect('up'); break
+          case 'ArrowDown':
+            this.changeSelect('down'); break
+        }
+      }
+    },
+    getLastChildren (tree) {
+      if (tree.status.open || tree.root) {
+        if (tree.children&&tree.children.length) {
+          return this.getLastChildren(tree.children[tree.children.length-1])
+        } else {
+          return tree.path
+        }
+      } else {
+        return tree.path
+      }
+    },
+    getNextSibling (node) {
+      if (node.tree.root) return node.tree.children[0].path
+      if (node.index===node.siblingCount-1) {
+        return this.getNextSibling(node.$parent)
+      } else { // go to its next sibling
+        return node.$parent.tree.children[node.index+1].path
+      }
+    },
+    selectUP (node) {
+      if (node.index===0) {
+        if (node.$parent.tree.root) { // go to last
+          this.treeState.selected = this.getLastChildren(this.tree)
+        } else { // go to its parent
+          this.treeState.selected = node.$parent.tree.path
+        }
+      } else { // go to previous sibling or the last child of it
+        let previousSibling = node.$parent.tree.children[node.index-1]
+        let path = this.getLastChildren(previousSibling)
+        this.treeState.selected = path
+      }
+    },
+    selectDOWN (node) {
+      if (node.tree.status.open&&node.tree.children&&node.tree.children.length) { // go to its first child
+        this.treeState.selected = node.tree.children[0].path
+      } else if (node.index===node.siblingCount-1) { // go to its parent's next sibling
+        this.treeState.selected = this.getNextSibling(node.$parent)
+      } else { // go to its next sibling
+        this.treeState.selected = node.$parent.tree.children[node.index+1].path
+      }
+    },
+    changeSelect (move) {
+      let node = this.nodes[this.treeState.selected]
+      if (!node) return
+      if (move==='up') { // up
+        this.selectUP(node)
+      } else if (move==='down') { // down
+        this.selectDOWN(node)
+      }
     },
     onupdate (change, value, origin) {
       this.$emit('update', change, value, origin)
@@ -82,17 +163,17 @@ export default {
         }
       }
     },
-    onChangeAllFold(status) {
-      let root = this.$children.find(_ => _.$options.name === 'ac-table-tree-item')
+    onChangeAllFold(status, root) {
+      if (!root) root = this.$children.find(_ => _.$options.name === 'ac-table-tree-item')
       if (status) {
         this.doForAllSubTree(root, _=> {
           if (_.tree.root) return
-          _.updateFold(status)
+          _.onlyUpdateFold(status)
         })
       } else {
         this.doForAllSubTree(root, _=> {
           if (_.tree.root) return
-          _.updateFold(status)
+          _.onlyUpdateFold(status)
         })
       }
       this.$emit('update')
@@ -104,6 +185,7 @@ export default {
 <style lang="scss">
 $pre: ac-table-tree;
 .#{$pre} {
+  outline:none;
 }
 .#{$pre}-tools {
   height: 1rem;

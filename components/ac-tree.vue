@@ -145,10 +145,10 @@ export default {
       }
       if (move==='up') { // up
         this.selectUP(node)
-        this.$emit('update', {storeUpdate: ['treeState']})
+        this.$emit('update', {storeUpdate: ['treeState'], changeSelect: true})
       } else if (move==='down') { // down
         this.selectDOWN(node)
-        this.$emit('update', {storeUpdate: ['treeState']})
+        this.$emit('update', {storeUpdate: ['treeState'], changeSelect: true})
       }
     },
     onupdate (change, value, origin) {

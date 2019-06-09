@@ -49,7 +49,9 @@
             >
               {{tree.name}}
             </span>
+            <!--
             <pre ref="comments" :class="`${prefixCls}-comments`">{{comments}}</pre>
+            -->
           </span>
         </div>
         <div ref="subtree" :class="`${prefixCls}-subtree`" v-show="tree.status.open">
@@ -89,7 +91,9 @@
             >
               {{tree.name}}
             </span>
+            <!--
             <pre ref="comments" :class="`${prefixCls}-comments`">{{comments}}</pre>
+            -->
           </span>
         </div>
       </template>
@@ -127,7 +131,7 @@ export default {
       prefixCls,
       status: {
         folder: false,
-        open: false
+        open: false,
       },
       childMap: { },
     }
@@ -204,7 +208,8 @@ export default {
     },
     overBody (event) {
       this.$el.style.setProperty('background', '#d8ffd7')
-      this.$refs.comments.style.setProperty('display', 'unset')
+      this.treeState.comments = {y:this.$el.getBoundingClientRect().y, comments: this.comments}
+      //this.$refs.comments.style.setProperty('display', 'unset')
       if (this.$refs.folder) {
         this.$refs.folder.style.setProperty('opacity', 1)
       }
@@ -214,7 +219,8 @@ export default {
     },
     leaveBody (event) {
       this.$el.style.removeProperty('background')
-      this.$refs.comments.style.setProperty('display', 'none')
+      this.treeState.comments = null
+      //this.$refs.comments.style.setProperty('display', 'none')
       if (this.$refs.folder) {
         this.$refs.folder.style.removeProperty('opacity')
       }

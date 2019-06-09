@@ -1,5 +1,17 @@
 <template>
-  <div :class="prefixCls">
+  <div :class="`${prefixCls}`"
+    @mousedown="mousedown"
+    @mouseup="mouseup"
+    @mousemove="mousemove"
+    @dblclick="doubleclick"
+  >
+    <div>
+      <pre ref="tree-comments"
+      :class="`${prefixCls}-tree-comments`"
+      v-show="store.treeState.comments&&!this.loading"
+      >{{ store.treeState.comments?store.treeState.comments.comments:"" }}</pre>
+      <div :class="`${prefixCls}-masker`" :style="{'z-index': masker?100:-1}" @mouseover="blockMouseOver"/>
+    </div>
     <div :class="`${prefixCls}-show-button`"> </div>
     <div :class="`${prefixCls}-header`">
       <span @click="cleanCurrentDatabase">
@@ -16,31 +28,36 @@
         </div>
       </template>
       <template v-else>
-        <div :class="`${prefixCls}-sidebar`">
-          <div :class="`${prefixCls}-sidebar-tab`" @click="changeSidebar">
-            <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
-              <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">tree</span>
-            </span>
-            <span name="show" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='show'}">
-              <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">show</span>
-            </span>
-            <span name="extra" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='extra'}">
-              <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">extra</span>
-            </span>
+        <div ref="sidebar-wrapper" :class="`${prefixCls}-sidebar-wrapper`">
+          <div ref="sidebar" :class="`${prefixCls}-sidebar`">
+            <div :class="`${prefixCls}-sidebar-tab`" @click="changeSidebar">
+              <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
+                <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">tree</span>
+              </span>
+              <span name="show" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='show'}">
+                <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">show</span>
+              </span>
+              <span name="extra" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='extra'}">
+                <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">extra</span>
+              </span>
+            </div>
+            <ac-tree ref="tree"
+              :tree="store.tree"
+              :treeState="store.treeState"
+              @update="onTreeUpdate"
+              v-show="store.status.sidebar==='tree'"
+            />
+            <ac-tree-show ref="show"
+              :show="store.showFields"
+              v-show="store.status.sidebar==='show'"
+            />
           </div>
-          <ac-tree ref="tree"
-            :tree="store.tree"
-            :treeState="store.treeState"
-            @update="onTreeUpdate"
-            v-show="store.status.sidebar==='tree'"
-          />
-          <ac-tree-show ref="show"
-            :show="store.showFields"
-            v-show="store.status.sidebar==='show'"
-          />
         </div>
-        <div :class="`${prefixCls}-resizer`">
-          <span style="width:1px; background:gray; margin-right:2px;"/>
+        <div ref="resizer"
+             :class="{[`${prefixCls}-resizer`]: true, [`${prefixCls}-resizer-selected`]:this.status.resizing}"
+             :style="{'z-index': masker?999:'unset'}"
+        >
+          <span style="width:1px; background:gray; margin-right:2px;pointer-events: none;"/>
         </div>
         <div :class="`${prefixCls}-content`"> </div>
       </template>
@@ -68,10 +85,7 @@ import acTreeShow from './ac-tree-show'
 
 /*
 TODO:
-* add view mode
-* write filter syntax
-* add tabs for sidebar
-* design toolbar
+* resize sidebar
 */
 
 export default {
@@ -89,7 +103,10 @@ export default {
       analyser: null,
       store: {
         tree: {root: true, status:{open:false}},
-        treeState: { selected: null },
+        treeState: {
+          selected: null,
+          comments: null,
+        },
         extraFields: [],
         showFields:[],
         status: {
@@ -97,11 +114,15 @@ export default {
           sidebar: 'tree',
         },
       },
+      status: {
+        resizing: false
+      },
       timers: {
         updateDatabase: {
           all: null
         },
         message: null,
+        treeComments: null
       },
       message: {
         text: '',
@@ -115,8 +136,24 @@ export default {
     }
   },
   watch: {
+    'store.treeState.comments' (value) {
+      if (!value) return
+      let el = this.$refs['tree-comments']
+      let resizer = this.$refs.resizer
+      if (!resizer || !el) return
+      let y = value.y
+      let x = resizer.getBoundingClientRect().x
+      el.style.setProperty('left', x+"px")
+      el.style.setProperty('top', y+"px")
+    }
   },
   computed: {
+    masker () {
+      return this.status.resizing
+    },
+    actree () {
+      return this.$children.find(_ => _.$options.name === 'ac-table-tree')
+    },
   },
   created () {
     let watcher = (value) => {
@@ -198,6 +235,7 @@ export default {
         }
         this.db = db
         this.loading = false
+        this.store.treeState.comments = null
       }
     },
     updateDatabase (fields) {
@@ -308,6 +346,15 @@ export default {
       } else { // update selected
         this.updateDatabase(['tree', 'treeState'])
       }
+      if (change&&change.changeSelect) {
+        clearTimeout(this.timers.treeComments)
+        let selected = this.store.treeState.selected
+        selected = this.actree.nodes[selected]
+        this.store.treeState.comments = {y:selected.$el.getBoundingClientRect().y, comments: selected.comments}
+        this.timers.treeComments = setTimeout(() => {
+          this.store.treeState.comments = null
+        }, 1000)
+      }
     },
     goThrough(root, func) {
       func(root)
@@ -331,7 +378,37 @@ export default {
       this.timers.message = setTimeout(() => {
         this.message.show = false
       }, timeout)
-    }
+    },
+    //resizer
+    mousedown (event) {
+      if (event.target === this.$refs.resizer) {
+        this.status.resizing = true
+      }
+    },
+    mouseup (event) {
+      if (this.status.resizing) this.status.resizing = false
+    },
+    mousemove (event) {
+      if (this.status.resizing) {
+        event.preventDefault()
+        let mouseX = event.x
+        let sidebar = this.$refs['sidebar-wrapper']
+        let sidebarX = sidebar.getBoundingClientRect().x
+        let calWidth = mouseX - sidebarX
+        sidebar.style.setProperty('width', calWidth+'px')
+      }
+      //let resizer = this.$refs.resizer.getBoundingClientRect()
+      //let calWidth = resizerX - sidebarX
+      //let width = sidebar.width
+      //console.log({mouseX, sidebarX, resizerX, calWidth, width})
+    },
+    doubleclick (event) {
+      if (event.target === this.$refs.resizer) {
+        let sidebar = this.$refs['sidebar-wrapper']
+        sidebar.style.removeProperty('width')
+      }
+    },
+    blockMouseOver (event) { },
   }
 }
 </script>
@@ -346,6 +423,11 @@ $fontFamily: "'Courier New', Courier, monospace";
   display: flex;
   flex-direction: column;
   min-height: 20em;
+}
+.#{$pre}-masker {
+  position: absolute;
+  width: 100%;
+  height: 100%;
 }
 .#{$pre}-header {
   height: 2em;
@@ -364,13 +446,28 @@ $fontFamily: "'Courier New', Courier, monospace";
   justify-content: center;
   align-items: center;
 }
+.#{$pre}-tree-comments {
+  position: fixed;
+  padding: 0;
+  margin: 0;
+}
 .#{$pre}-sidebar {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  width: max-content;
+}
+.#{$pre}-sidebar-wrapper {
+  display: flex;
+  overflow-x: scroll;
+  position: relative;
 }
 .#{$pre}-resizer {
   cursor: ew-resize;
   display: flex;
+}
+.#{$pre}-resizer-selected {
+  background: gray;
 }
 .#{$pre}-sidebar-tab {
   background: #f7faff;

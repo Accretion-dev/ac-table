@@ -49,9 +49,6 @@
             >
               {{tree.name}}
             </span>
-            <!--
-            <pre ref="comments" :class="`${prefixCls}-comments`">{{comments}}</pre>
-            -->
           </span>
         </div>
         <div ref="subtree" :class="`${prefixCls}-subtree`" v-show="tree.status.open">
@@ -91,9 +88,6 @@
             >
               {{tree.name}}
             </span>
-            <!--
-            <pre ref="comments" :class="`${prefixCls}-comments`">{{comments}}</pre>
-            -->
           </span>
         </div>
       </template>

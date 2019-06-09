@@ -14,6 +14,13 @@
     </div>
     <div :class="`${prefixCls}-show-button`"> </div>
     <div :class="`${prefixCls}-header`">
+      <span
+        :class="`${prefixCls}-toolbar`"
+        :style="{background: status.sidebarShow?'#d8ffd7':'unset'}"
+        @click="status.sidebarShow=!status.sidebarShow"
+      >
+        T
+      </span>
       <span @click="cleanCurrentDatabase">
         cleanCuurent
       </span>
@@ -28,19 +35,19 @@
         </div>
       </template>
       <template v-else>
-        <div ref="sidebar-wrapper" :class="`${prefixCls}-sidebar-wrapper`">
+        <div ref="sidebar-wrapper" :class="`${prefixCls}-sidebar-wrapper`" v-show="status.sidebarShow">
+          <div :class="`${prefixCls}-sidebar-tab`" @click="changeSidebar">
+            <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
+              <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">tree</span>
+            </span>
+            <span name="show" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='show'}">
+              <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">show</span>
+            </span>
+            <span name="extra" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='extra'}">
+              <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">extra</span>
+            </span>
+          </div>
           <div ref="sidebar" :class="`${prefixCls}-sidebar`">
-            <div :class="`${prefixCls}-sidebar-tab`" @click="changeSidebar">
-              <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
-                <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">tree</span>
-              </span>
-              <span name="show" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='show'}">
-                <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">show</span>
-              </span>
-              <span name="extra" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='extra'}">
-                <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">extra</span>
-              </span>
-            </div>
             <ac-tree ref="tree"
               :tree="store.tree"
               :treeState="store.treeState"
@@ -56,6 +63,7 @@
         <div ref="resizer"
              :class="{[`${prefixCls}-resizer`]: true, [`${prefixCls}-resizer-selected`]:this.status.resizing}"
              :style="{'z-index': masker?999:'unset'}"
+             v-show="status.sidebarShow"
         >
           <span style="width:1px; background:gray; margin-right:2px;pointer-events: none;"/>
         </div>
@@ -110,11 +118,11 @@ export default {
         extraFields: [],
         showFields:[],
         status: {
-          sidebarSize: null,
           sidebar: 'tree',
         },
       },
       status: {
+        sidebarShow: true,
         resizing: false
       },
       timers: {
@@ -230,7 +238,7 @@ export default {
         for (let key of keys) {
           let store = tx.objectStore(key)
           for (let each of uids) {
-            await stores.delete(each)
+            await this.stores.delete(each)
           }
         }
         this.db = db
@@ -266,6 +274,7 @@ export default {
         }
       }
       await tx.done
+      console.log('clean current database')
     },
     async cleanAllDatabase () {
       let keys = Object.keys(this.store)
@@ -273,7 +282,7 @@ export default {
       let tx = db.transaction(['uids',...keys], 'readwrite')
       let uidsStore = tx.objectStore('uids')
       let uids = await uidsStore.getAllKeys()
-      for (let key of Object.keys(stores)) {
+      for (let key of Object.keys(this.stores)) {
         for (let uid of uids) {
           await tx.objectStore(key).delete(uid)
         }
@@ -397,10 +406,6 @@ export default {
         let calWidth = mouseX - sidebarX
         sidebar.style.setProperty('width', calWidth+'px')
       }
-      //let resizer = this.$refs.resizer.getBoundingClientRect()
-      //let calWidth = resizerX - sidebarX
-      //let width = sidebar.width
-      //console.log({mouseX, sidebarX, resizerX, calWidth, width})
     },
     doubleclick (event) {
       if (event.target === this.$refs.resizer) {
@@ -423,6 +428,9 @@ $fontFamily: "'Courier New', Courier, monospace";
   display: flex;
   flex-direction: column;
   min-height: 20em;
+}
+.#{$pre}-toolbar {
+  padding: 0 0.5rem;
 }
 .#{$pre}-masker {
   position: absolute;
@@ -455,10 +463,11 @@ $fontFamily: "'Courier New', Courier, monospace";
   flex: 1;
   display: flex;
   flex-direction: column;
-  width: max-content;
+  min-width: max-content;
 }
 .#{$pre}-sidebar-wrapper {
   display: flex;
+  flex-direction: column;
   overflow-x: scroll;
   position: relative;
 }

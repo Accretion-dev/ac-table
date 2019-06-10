@@ -429,6 +429,7 @@ $fontFamily: "'Courier New', Courier, monospace";
   display: flex;
   flex-direction: column;
   min-height: 20em;
+  max-height: 90vh;
 }
 .#{$pre}-toolbar {
   padding: 0 0.5rem;
@@ -469,7 +470,7 @@ $fontFamily: "'Courier New', Courier, monospace";
 .#{$pre}-sidebar-wrapper {
   display: flex;
   flex-direction: column;
-  overflow-x: scroll;
+  overflow: scroll;
   position: relative;
 }
 .#{$pre}-resizer {

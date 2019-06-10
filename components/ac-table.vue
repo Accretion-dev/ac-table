@@ -40,8 +40,8 @@
             <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
               <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">tree</span>
             </span>
-            <span name="show" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='show'}">
-              <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">show</span>
+            <span name="projection" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='projection'}">
+              <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">projection</span>
             </span>
             <span name="extra" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='extra'}">
               <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">extra</span>
@@ -54,9 +54,9 @@
               @update="onTreeUpdate"
               v-show="store.status.sidebar==='tree'"
             />
-            <ac-tree-show ref="show"
-              :show="store.showFields"
-              v-show="store.status.sidebar==='show'"
+            <ac-tree-projection ref="projection"
+              :projections="store.projectionFields"
+              v-show="store.status.sidebar==='projection'"
             />
           </div>
         </div>
@@ -89,7 +89,7 @@ const prefixCls = 'ac-table'
 import {JsonAnalyser} from '../utils/jsonAnalyser.js'
 import { openDB, deleteDB, wrap, unwrap } from 'idb'
 import acTree from './ac-tree'
-import acTreeShow from './ac-tree-show'
+import acTreeProjection from './ac-tree-projection'
 
 /*
 TODO:
@@ -98,7 +98,7 @@ TODO:
 
 export default {
   name: 'ac-table',
-  components: {acTree, acTreeShow},
+  components: {acTree, acTreeProjection},
   props: {
     data: { type: Array, default () { return [] } },
     uid: { type: String, default () { return (new Date()).toISOString() }},
@@ -110,13 +110,13 @@ export default {
       loading: true,
       analyser: null,
       store: {
-        tree: {root: true, status:{open:false}},
+        tree: {root: true, status:{open:true}},
         treeState: {
           selected: null,
           comments: null,
         },
         extraFields: [],
-        showFields:[],
+        projectionFields:[],
         status: {
           sidebar: 'tree',
         },
@@ -168,8 +168,8 @@ export default {
       let node
       if (value==='tree') {
         node = this.$refs.tree
-      } else if (value==='show') {
-        node = this.$refs.show
+      } else if (value==='projection') {
+        node = this.$refs.projection
       }
       if (node) {
         setTimeout(() => {
@@ -304,17 +304,18 @@ export default {
       this.goThrough(tree, _ => {
         this.$set(_,'status',{
           open:false,
-          show:false
+          projection:false
         })
       })
       tree.children.forEach(_ => {
-        this.addShow(_)
+        this.addProjection(_)
       })
+      tree.status.open = true
       this.store.tree = tree
     },
     // about show
-    addShow(tree, extra) {
-      tree.status.show = true
+    addProjection(tree, extra) {
+      tree.status.projection = true
       let toAdd = {
         name: tree.name,
         path: tree.path, // uid for extraFields
@@ -325,33 +326,33 @@ export default {
           show: true
         },
       }
-      this.store.showFields.push(toAdd)
+      this.store.projectionFields.push(toAdd)
     },
-    removeShow(obj) {
-      let index = this.store.showFields.findIndex(_ => _===obj)
+    removeProjection(obj) {
+      let index = this.store.projectionFields.findIndex(_ => _===obj)
       let tree
       if (obj.extra) {
         tree = this.extraFields.find(_ => _.path === obj.path)
       } else {
         tree = this.$refs.tree.nodes[obj.path].tree
       }
-      tree.status.show = false
-      this.store.showFields.splice(index, 1)
+      tree.status.projection = false
+      this.store.projectionFields.splice(index, 1)
     },
     // others
     onTreeUpdate (change, value, origin) {
       if (change&&change.storeUpdate) {
         this.updateDatabase(change.storeUpdate)
-      } else if (change&&change.status&&change.status.show!==undefined) {
-        if (change.status.show) {
-          this.addShow(origin.tree)
+      } else if (change&&change.status&&change.status.projection!==undefined) {
+        if (change.status.projection) {
+          this.addProjection(origin.tree)
         } else {
-          let obj = this.store.showFields.find(_ => _.path===origin.tree.path && !_.extra)
+          let obj = this.store.projectionFields.find(_ => _.path===origin.tree.path && !_.extra)
           if (obj) {
-            this.removeShow(obj)
+            this.removeProjection(obj)
           }
         }
-        this.updateDatabase(['tree', 'showFields'])
+        this.updateDatabase(['tree', 'projectionFields'])
       } else { // update selected
         this.updateDatabase(['tree', 'treeState'])
       }

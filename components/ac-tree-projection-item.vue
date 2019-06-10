@@ -16,7 +16,7 @@
 
 <script>
 import icons from '../icons/icons.vue'
-const prefixCls = 'ac-tree-show-item'
+const prefixCls = 'ac-tree-projection-item'
 const typeMap = {
   'string': 'S',
   'boolean': 'B',
@@ -29,7 +29,7 @@ const typeMap = {
 }
 
 export default {
-  name: 'ac-tree-show-item',
+  name: 'ac-tree-projection-item',
   components: {icons},
   props: {
     data: {type: Object, required: true}
@@ -68,7 +68,7 @@ export default {
 </script>
 
 <style lang="scss">
-$pre: ac-tree-show-item;
+$pre: ac-tree-projection-item;
 .#{$pre}:hover {
   background: #d8ffd7;
 }

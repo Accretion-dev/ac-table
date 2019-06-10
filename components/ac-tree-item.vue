@@ -6,8 +6,41 @@
     @click.stop="onclick"
   >
     <!-- [`${prefixCls}-selected`]: this.level&&this.treeState.selected===this.tree.path -->
-    <template v-if="tree.root">
-      <div ref="subtree" v-if="!!tree.children" :class="`${prefixCls}-subtree`">
+    <template v-if="tree.children">  <!--not root but have children-->
+      <div ref="content" :class="`${prefixCls}-content`">
+        <span
+          ref='folder'
+          :class="[`${prefixCls}-folder`, 'ac-unselectable']"
+          @mouseover="overBody"
+          @mouseleave="leaveBody"
+          v-if="!this.tree.root"
+        >
+          <span> ► </span>
+          <span ref="folderOpen" :class="`${prefixCls}-folder-open`" v-show="tree.status.open"> ▼ </span>
+        </span>
+        <span :class="`${prefixCls}-title`" @mouseover="overBody" @mouseleave="leaveBody">
+          <span v-if="icon.array">
+            <span class="ac-unselectable">[</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">]</span>
+          </span>
+          <span v-else>
+            <span class="ac-unselectable">&nbsp;</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">&nbsp;</span>
+          </span>
+          <span ref="name" :class="{
+              [`${prefixCls}-name`]:true,
+              ['ac-unselectable']:true,
+              [`${prefixCls}-projection`]: projection,
+            }"
+          >
+            {{tree.name}}
+          </span>
+        </span>
+      </div>
+      <div ref="subtree" :class="`${prefixCls}-subtree`" v-show="tree.status.open">
+        <div ref="vbar"
+             :class="`${prefixCls}-vbar`"
+             @mouseover="overBody"
+             @mouseleave="leaveBody"
+        />
         <ac-tree-item
            ref="subtrees"
            v-for="(child,index) of tree.children"
@@ -22,75 +55,25 @@
         />
       </div>
     </template>
-    <template v-else>
-      <template v-if="tree.children">  <!--not root but have children-->
-        <div ref="content" :class="`${prefixCls}-content`">
-          <span
-            ref='folder'
-            :class="[`${prefixCls}-folder`, 'ac-unselectable']"
-            @mouseover="overBody"
-            @mouseleave="leaveBody"
+    <template v-else> <!--not root and not have children-->
+      <div ref="content" :class="`${prefixCls}-content`">
+        <span :class="`${prefixCls}-title`" @mouseover="overBody" @mouseleave="leaveBody">
+          <span v-if="icon.array">
+            <span class="ac-unselectable">[</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">]</span>
+          </span>
+          <span v-else>
+            <span class="ac-unselectable">&nbsp;</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">&nbsp;</span>
+          </span>
+          <span ref="name" :class="{
+              [`${prefixCls}-name`]:true,
+              'ac-unselectable':true,
+              [`${prefixCls}-projection`]: projection,
+            }"
           >
-            <span> ► </span>
-            <span ref="folderOpen" :class="`${prefixCls}-folder-open`" v-show="tree.status.open"> ▼ </span>
+            {{tree.name}}
           </span>
-          <span :class="`${prefixCls}-title`" @mouseover="overBody" @mouseleave="leaveBody">
-            <span v-if="icon.array">
-              <span class="ac-unselectable">[</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">]</span>
-            </span>
-            <span v-else>
-              <span class="ac-unselectable">&nbsp;</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">&nbsp;</span>
-            </span>
-            <span ref="name" :class="{
-                [`${prefixCls}-name`]:true,
-                ['ac-unselectable']:true,
-                [`${prefixCls}-shown`]: shown,
-              }"
-            >
-              {{tree.name}}
-            </span>
-          </span>
-        </div>
-        <div ref="subtree" :class="`${prefixCls}-subtree`" v-show="tree.status.open">
-          <div ref="vbar"
-               :class="`${prefixCls}-vbar`"
-               @mouseover="overBody"
-               @mouseleave="leaveBody"
-          />
-          <ac-tree-item
-             ref="subtrees"
-             v-for="(child,index) of tree.children"
-            :key="child.path"
-            :index="index"
-            :siblingCount="tree.children.length"
-            :tree="child"
-            :level="level+1"
-            :treeState="treeState"
-            :nodes="nodes"
-            @update="onupdate"
-          />
-        </div>
-      </template>
-      <template v-else> <!--not root and not have children-->
-        <div ref="content" :class="`${prefixCls}-content`">
-          <span :class="`${prefixCls}-title`" @mouseover="overBody" @mouseleave="leaveBody">
-            <span v-if="icon.array">
-              <span class="ac-unselectable">[</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">]</span>
-            </span>
-            <span v-else>
-              <span class="ac-unselectable">&nbsp;</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">&nbsp;</span>
-            </span>
-            <span ref="name" :class="{
-                [`${prefixCls}-name`]:true,
-                'ac-unselectable':true,
-                [`${prefixCls}-shown`]: shown,
-              }"
-            >
-              {{tree.name}}
-            </span>
-          </span>
-        </div>
-      </template>
+        </span>
+      </div>
     </template>
   </div>
 </template>
@@ -131,8 +114,8 @@ export default {
     }
   },
   computed: {
-    shown () {
-      return this.tree.status.show
+    projection () {
+      return this.tree.status.projection
     },
     comments () {
       let result = [`|${this.tree.path}`]
@@ -186,9 +169,9 @@ export default {
         }
       }
     },
-    updateShow () {
-      let status = !this.tree.status.show
-      this.$emit('update', {status:{show:status}}, this.tree, this)
+    updateProjection () {
+      let status = !this.tree.status.projection
+      this.$emit('update', {status:{projection:status}}, this.tree, this)
     },
     updateSelected (value) {
       if (value) {
@@ -201,6 +184,7 @@ export default {
       }
     },
     overBody (event) {
+      if (this.tree.root) return
       this.$el.style.setProperty('background', '#d8ffd7')
       this.treeState.comments = {y:this.$el.getBoundingClientRect().y, comments: this.comments}
       //this.$refs.comments.style.setProperty('display', 'unset')
@@ -223,6 +207,7 @@ export default {
       }
     },
     onclick (event) {
+      if(this.tree.root) return
       const goodType = ['array', 'object', 'mixed']
       if (goodType.includes(this.tree.type)) {
         this.updateFold(!this.tree.status.open)
@@ -242,7 +227,7 @@ export default {
 
 <style lang="scss">
 $pre: ac-table-tree-item;
-.#{$pre}-shown {
+.#{$pre}-projection {
   color: green;
   font-weight: bolder;
 }

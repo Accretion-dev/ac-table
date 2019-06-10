@@ -71,8 +71,10 @@ export default {
         if (node) {
           switch (event.key) {
             case 'ArrowRight':
+            case 'l':
               this.onChangeAllFold(true, node); break
             case 'ArrowLeft':
+            case 'h':
               this.onChangeAllFold(false, node); break
           }
         }
@@ -80,18 +82,22 @@ export default {
       } else {
         switch (event.key) {
           case 'ArrowRight':
+          case 'l':
             this.foldSelected(true); break
           case 'ArrowLeft':
+          case 'h':
             this.foldSelected(false); break
           case ' ':
             this.foldSelected(); break
           case 'ArrowUp':
+          case 'k':
             this.changeSelect('up'); break
           case 'ArrowDown':
+          case 'j':
             this.changeSelect('down'); break
-          case 's':
+          case 'p':
             let node = this.nodes[this.treeState.selected]
-            if (node) node.updateShow()
+            if (node) node.updateProjection()
             break
         }
       }

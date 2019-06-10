@@ -1,6 +1,6 @@
 <template>
   <div :class="`${prefixCls}`" tabindex="0">
-    <ac-tree-show-item v-for="data of show"
+    <ac-tree-projection-item v-for="data of projections"
       :key="`${data.extra?'e__':'f__'}${data.path}`"
       :data="data"
     />
@@ -8,14 +8,14 @@
 </template>
 
 <script>
-const prefixCls = 'ac-tree-show'
-import acTreeShowItem from './ac-tree-show-item'
+const prefixCls = 'ac-tree-projection'
+import acTreeProjectionItem from './ac-tree-projection-item'
 
 export default {
-  name: 'ac-tree-show',
-  components: {acTreeShowItem},
+  name: 'ac-tree-projection',
+  components: {acTreeProjectionItem},
   props: {
-    show: {type: Array, required: true}
+    projections: {type: Array, required: true}
   },
   data () {
     return {
@@ -36,7 +36,7 @@ export default {
 </script>
 
 <style lang="scss">
-$pre: ac-tree-show;
+$pre: ac-tree-projection;
 .#{$pre} {
   outline:none;
 }

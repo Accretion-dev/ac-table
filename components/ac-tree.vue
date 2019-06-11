@@ -1,7 +1,7 @@
 <template>
   <div :class="`${prefixCls}`"
        tabindex="0"
-       @keydown.prevent="keydown">
+       @keydown="keydown">
     <div :class="`${prefixCls}-tools`">
       <span
         :class="`${prefixCls}-tools-button`"
@@ -72,34 +72,49 @@ export default {
           switch (event.key) {
             case 'ArrowRight':
             case 'l':
-              this.onChangeAllFold(true, node); break
+              event.preventDefault();
+              this.onChangeAllFold(true, node);
+              break
             case 'ArrowLeft':
             case 'h':
-              this.onChangeAllFold(false, node); break
+              event.preventDefault();
+              this.onChangeAllFold(false, node);
+              break
           }
         }
-
       } else {
         let node = this.nodes[this.treeState.selected]
         switch (event.key) {
           case 'ArrowRight':
           case 'l':
-            this.foldSelected(true); break
+            event.preventDefault();
+            this.foldSelected(true);
+            break
           case 'ArrowLeft':
           case 'h':
-            this.foldSelected(false); break
+            event.preventDefault();
+            this.foldSelected(false);
+            break
           case ' ':
-            this.foldSelected(); break
+            event.preventDefault();
+            this.foldSelected();
+            break
           case 'ArrowUp':
           case 'k':
-            this.changeSelect('up'); break
+            event.preventDefault();
+            this.changeSelect('up');
+            break
           case 'ArrowDown':
           case 'j':
-            this.changeSelect('down'); break
+            event.preventDefault();
+            this.changeSelect('down');
+            break
           case 'p':
+            event.preventDefault();
             if (node) node.updateProjection()
             break
           case 'n':
+            event.preventDefault();
             if (node) node.updateNewline()
             break
         }

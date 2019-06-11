@@ -35,7 +35,7 @@
         </div>
       </template>
       <template v-else>
-        <div ref="sidebar-wrapper" :class="`${prefixCls}-sidebar-wrapper`" v-show="status.sidebarShow">
+        <div ref="sidebar-wrapper" :class="`${prefixCls}-sidebar-wrapper`" v-show="status.sidebarShow" @keydown="sidebarKeydown">
           <div :class="`${prefixCls}-sidebar-tab`" @click="changeSidebar">
             <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
               <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">tree</span>
@@ -58,6 +58,9 @@
               :projections="store.projectionFields"
               v-show="store.status.sidebar==='projection'"
             />
+            <div ref="extra" v-show="store.status.sidebar==='extra'" tabindex="0">
+              extra terms
+            </div>
           </div>
         </div>
         <div ref="resizer"
@@ -179,15 +182,17 @@ export default {
   },
   created () {
     let watcher = (value) => {
-      let node
+      let el
       if (value==='tree') {
-        node = this.$refs.tree
+        el = this.$refs.tree&&this.$refs.tree.$el
       } else if (value==='projection') {
-        node = this.$refs.projection
+        el = this.$refs.projection&&this.$refs.projection.$el
+      } else if (value==='extra') {
+        el = this.$refs.extra
       }
-      if (node) {
+      if (el) {
         setTimeout(() => {
-          node.$el.focus()
+          el.focus()
         },0)
       }
     }
@@ -328,6 +333,33 @@ export default {
       })
       tree.status.open = true
       this.store.tree = tree
+    },
+    // sidebar
+    sidebarKeydown (event) {
+      if (event.shiftKey) {
+        switch (event.key) {
+          case 'Tab':
+            event.preventDefault()
+            event.stopPropagation()
+            this.switchTab(-1)
+            break
+        }
+      } else {
+        switch (event.key) {
+          case 'Tab':
+            event.preventDefault()
+            event.stopPropagation()
+            this.switchTab(1)
+            break
+        }
+      }
+    },
+    switchTab (value) {
+      let tabs = ['tree', 'projection', 'extra']
+      let cIndex = tabs.findIndex(_ => _===this.store.status.sidebar)
+      let nIndex = (cIndex + tabs.length + value) % tabs.length
+      console.log(nIndex, value)
+      this.store.status.sidebar = tabs[nIndex]
     },
     // about show
     addProjection(tree, extra) {

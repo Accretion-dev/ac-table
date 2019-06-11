@@ -31,7 +31,9 @@
               [`${prefixCls}-projection`]: projection,
             }"
           >
-            {{tree.name}}
+            <span style="padding-left:0.1rem; padding-right:0.3rem;"> {{tree.name}} </span>
+            <icons :style="{visibility: tree.status.noPreNewline?'visible':'hidden'}" name="no_pre_newline" size="0.9rem"/>
+            <icons :style="{visibility: tree.status.noNewline?'visible':'hidden'}" name="no_newline" size="0.9rem"/>
           </span>
         </span>
       </div>
@@ -70,7 +72,9 @@
               [`${prefixCls}-projection`]: projection,
             }"
           >
-            {{tree.name}}
+            <span style="padding-left:0.1rem; padding-right:0.3rem;"> {{tree.name}} </span>
+            <icons :style="{visibility: tree.status.noPreNewline?'visible':'hidden'}" name="no_pre_newline" size="0.9rem"/>
+            <icons :style="{visibility: tree.status.noNewline?'visible':'hidden'}" name="no_newline" size="0.9rem"/>
           </span>
         </span>
       </div>
@@ -155,6 +159,31 @@ export default {
   methods: {
     onlyUpdateFold (value) {
       this.tree.status.open = value
+    },
+    updateNewline (status) {
+      if (status) {
+        this.tree.status.noNewline = status.noNewline
+        this.tree.status.noPreNewline = status.noPreNewline
+      } else {
+        let pre = this.tree.status.noPreNewline
+        let suf = this.tree.status.noNewline
+        if (!pre && !suf) {
+          this.tree.status.noNewline = true
+        } else if (!pre && suf) {
+          this.tree.status.noNewline = false
+          this.tree.status.noPreNewline = true
+        } else if (pre && !suf) {
+          this.tree.status.noNewline = true
+          this.tree.status.noPreNewline = true
+        } else {
+          this.tree.status.noNewline = false
+          this.tree.status.noPreNewline = false
+        }
+      }
+      this.$emit('update', {status:{newline: {
+        noNewline: this.tree.status.noNewline,
+        noPreNewline: this.tree.status.noPreNewline,
+      }} }, this.tree, this)
     },
     updateFold (value) {
       if (value===undefined) value = !this.tree.status.open
@@ -263,7 +292,7 @@ $pre: ac-table-tree-item;
   flex:1
 }
 .#{$pre}-name {
-  padding-left: 0.1em;
+  display: inline-flex;
 }
 .#{$pre}-vbar {
   position: absolute;

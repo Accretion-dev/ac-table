@@ -67,7 +67,10 @@
         >
           <span style="width:1px; background:gray; margin-right:2px;pointer-events: none;"/>
         </div>
-        <div :class="`${prefixCls}-content`"> </div>
+        <div :class="`${prefixCls}-content`">
+          <div>
+          </div>
+        </div>
       </template>
     </div>
     <div :class="`${prefixCls}-footer`">
@@ -90,15 +93,20 @@ import {JsonAnalyser} from '../utils/jsonAnalyser.js'
 import { openDB, deleteDB, wrap, unwrap } from 'idb'
 import acTree from './ac-tree'
 import acTreeProjection from './ac-tree-projection'
+import icons from '../icons/icons.vue'
 
 /*
 TODO:
-* resize sidebar
+* select, keyboard of projection
+* postive and negative mode of projection
+* single object mode
+
+... more type of data (root could be array or simple type)
 */
 
 export default {
   name: 'ac-table',
-  components: {acTree, acTreeProjection},
+  components: {acTree, acTreeProjection, icons},
   props: {
     data: { type: Array, default () { return [] } },
     uid: { type: String, default () { return (new Date()).toISOString() }},
@@ -109,6 +117,9 @@ export default {
       db: null,
       loading: true,
       analyser: null,
+      filteredData: [],
+      projectedData: {},
+      projectedStrings: [],
       store: {
         tree: {root: true, status:{open:true}},
         treeState: {
@@ -153,7 +164,7 @@ export default {
       let x = resizer.getBoundingClientRect().x
       el.style.setProperty('left', x+"px")
       el.style.setProperty('top', y+"px")
-    }
+    },
   },
   computed: {
     masker () {
@@ -162,6 +173,9 @@ export default {
     actree () {
       return this.$children.find(_ => _.$options.name === 'ac-table-tree')
     },
+    defaultProjection () {
+      return this.tree.children.map(_ => _.path)
+    }
   },
   created () {
     let watcher = (value) => {
@@ -304,7 +318,9 @@ export default {
       this.goThrough(tree, _ => {
         this.$set(_,'status',{
           open:false,
-          projection:false
+          projection:false,
+          noNewline: false,
+          noPreNewline: false,
         })
       })
       tree.children.forEach(_ => {
@@ -323,7 +339,9 @@ export default {
         arrayType: tree.arrayType,
         extra,
         status: {
-          show: true
+          show: true,
+          noNewline: tree.status&&tree.status.noNewline,
+          noPreNewline: tree.status&&tree.status.noPreNewline,
         },
       }
       this.store.projectionFields.push(toAdd)
@@ -339,6 +357,15 @@ export default {
       tree.status.projection = false
       this.store.projectionFields.splice(index, 1)
     },
+    updateProjectionStatus(obj) {
+      //let tree = this.$refs.tree.nodes[obj.path].tree
+      //let status = obj.status
+      //tree.updateNewline(status)
+      let project = this.store.projectionFields.find(_ => _.path===obj.path)
+      let noPreNewline = obj.status.noPreNewline
+      let noNewline = obj.status.noNewline
+      Object.assign(project.status, {noPreNewline, noNewline})
+    },
     // others
     onTreeUpdate (change, value, origin) {
       if (change&&change.storeUpdate) {
@@ -353,6 +380,11 @@ export default {
           }
         }
         this.updateDatabase(['tree', 'projectionFields'])
+      } else if (change&&change.status&&change.status.newline) { // update newline
+        this.updateDatabase(['tree'])
+        if (value.status.projection) { // update projection here
+          this.updateProjectionStatus(origin.tree)
+        }
       } else { // update selected
         this.updateDatabase(['tree', 'treeState'])
       }
@@ -415,6 +447,62 @@ export default {
       }
     },
     blockMouseOver (event) { },
+    // about filter and projection
+    onFilterChange() {
+      this.filteredData = this.data
+    },
+    onProjectionChange(newProjects, oldProjects) {
+      // can optimize here
+      this.projectedData = {}
+      for (let projection of this.store.projectionFields) {
+        if (!projection.extra) { // normal fields
+          this.projectedData[projection.path] = this.analyser.getValueByPath(this.filteredData, projection.path)
+        } else { // extra fields
+          this.projectedData[projection.path] = this.data.map(_ => projection.calculate(_))
+        }
+      }
+      // projectionStrings
+      if (this.projectionFields.length===0) { // no fields
+        this.projectedStrings = []
+      } else {
+        this.projectedStrings = ['[']
+        for (let eachdata of this.filteredData) {
+          let term
+          if (this.store.projectionFields.length === 1) { // one field
+            let projection = this.store.projectionFields[0]
+            let result
+            if (!projection.extra) { // normal fields
+              result = this.analyser.getValueByPath(eachdata, projection.path)
+            } else { // extra fields
+              result = this.data.map(_ => projection.calculate(_))
+            }
+            term = ['{']
+            if (!projection.status.noPreCR) term.push('\n')
+            term.push(result)
+            if (!projection.status.noCR) term.push('\n')
+            term.push('},')
+          } else { // many fields
+            if (!this.store.projectionFields[0].status.noPreCR) item.push('\n')
+            let before = this.store.projectionFields.slice(0,-1)
+            let next = this.store.projectionFields.slice(1)
+            let len = before.length
+            for (let index=0; index<len; index++) {
+              pb = before[index]
+              pn = next[index]
+            }
+            for (let projection of this.store.projectionFields) {
+              if (!projection.extra) { // normal fields
+                this.projectedData[projection.path] = this.analyser.getValueByPath(this.filteredData, projection.path)
+              } else { // extra fields
+                this.projectedData[projection.path] = this.data.map(_ => projection.calculate(_))
+              }
+            }
+
+          }
+          this.projectedStrings.push(term)
+        }
+      }
+    },
   }
 }
 </script>
@@ -449,6 +537,7 @@ $fontFamily: "'Courier New', Courier, monospace";
 .#{$pre}-main {
   display: flex;
   flex: 1;
+  max-height: inherit;
 }
 .#{$pre}-loading {
   display: flex;

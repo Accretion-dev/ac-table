@@ -80,6 +80,7 @@ export default {
         }
 
       } else {
+        let node = this.nodes[this.treeState.selected]
         switch (event.key) {
           case 'ArrowRight':
           case 'l':
@@ -96,8 +97,10 @@ export default {
           case 'j':
             this.changeSelect('down'); break
           case 'p':
-            let node = this.nodes[this.treeState.selected]
             if (node) node.updateProjection()
+            break
+          case 'n':
+            if (node) node.updateNewline()
             break
         }
       }

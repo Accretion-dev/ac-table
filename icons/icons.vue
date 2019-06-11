@@ -1,5 +1,5 @@
 <template>
-  <span v-html="html"/>
+  <span class="ac-table-icons" v-html="html"/>
 </template>
 
 <script>
@@ -34,4 +34,7 @@ export default {
 </script>
 
 <style lang="scss">
+.ac-table-icons {
+  display: inline-flex;
+}
 </style>

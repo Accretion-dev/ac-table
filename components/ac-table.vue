@@ -102,7 +102,9 @@ import icons from '../icons/icons.vue'
 TODO:
 * select, keyboard of projection
 * postive and negative mode of projection
-* single object mode
+* pretty printer with
+  * noNewline and noPreNewline
+  * projectionFields
 
 ... more type of data (root could be array or simple type)
 */

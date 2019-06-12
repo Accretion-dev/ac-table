@@ -323,12 +323,20 @@ export default {
     genTree (data) {
       let {structTree, tree} = this.analyser.analysis(data)
       this.goThrough(tree, _ => {
-        this.$set(_,'status',{
-          open:false,
-          projection:false,
-          noNewline: false,
-          noPreNewline: false,
-        })
+        if (_.type==='object'||_.type==='array') {
+          this.$set(_,'status',{
+            open:false,
+            projection:false,
+            noNewline: false,
+            noFirstNewline: false,
+          })
+        } else {
+          this.$set(_,'status',{
+            open:false,
+            projection:false,
+            noNewline: false,
+          })
+        }
       })
       tree.children.forEach(_ => {
         this.addProjection(_)
@@ -375,7 +383,7 @@ export default {
         status: {
           show: true,
           noNewline: tree.status&&tree.status.noNewline,
-          noPreNewline: tree.status&&tree.status.noPreNewline,
+          noFirstNewline: tree.status&&tree.status.noFirstNewline,
         },
       }
       this.store.projectionFields.push(toAdd)
@@ -396,9 +404,9 @@ export default {
       //let status = obj.status
       //tree.updateNewline(status)
       let project = this.store.projectionFields.find(_ => _.path===obj.path)
-      let noPreNewline = obj.status.noPreNewline
+      let noFirstNewline = obj.status.noFirstNewline
       let noNewline = obj.status.noNewline
-      Object.assign(project.status, {noPreNewline, noNewline})
+      Object.assign(project.status, {noFirstNewline, noNewline})
     },
     // others
     onTreeUpdate (change, value, origin) {
@@ -485,54 +493,165 @@ export default {
     onFilterChange() {
       this.filteredData = this.data
     },
-    onProjectionChange(newProjects, oldProjects) {
+    _prettyPrint (data, tree, level) {
+      let result = []
+      let type = this.analyser.getType(data)
+      let prefix = [...Array(2*level).keys()].map(_ => ' ').join('')
+      if (type === 'object') {
+        let item
+        if (!(tree&&tree.type==="object"&&tree.children)) {
+          throw Error(`Error data format, data:\n${data}, tree:\n${tree}`)
+        }
+        let keys = Object.keys(data)
+        let firstChild = tree.children.find(_ => _.name === keys[0])
+        if (!firstChild) {
+          term = ['{\n']
+        } else if (firstChild.type === 'mixed') {
+          let data0 = data[firstChild.name]
+          let firstType = this.analyser.getType(data0)
+          let thistree = tree.children.find(_ => _.type === type)
+          if (thistree) {
+            if (!thistree.status.noPreNewline) {
+              term = ['{\n']
+            } else {
+              term = ['{ ']
+            }
+          } else {
+            term = ['{\n']
+          }
+        } else {
+          if (!firstChild.status.noPreNewline) {
+            term = ['{\n']
+          } else {
+            term = ['{ ']
+          }
+        }
+        for (let index=0; index<tree.children.length; index++) {
+          let thistree = tree.children[index]
+          let pn = tree.children[index+1]
+          let name = thistree.name
+          let thisdata = data[name]
+          let thisresult = this._prettyPrint(thisdata, thistree, level+1)
+          term.push(`${thistree.name}: ${thisresult}`)
+          if (!thistree.status.noNewline&&(!pn||pn&&!pn.status.noPreNewline)) {
+            term.push(',\n')
+          } else {
+            term.push(', ')
+          }
+        }
+        term.push('},\n')
+        term = term.join('')
+        result.push(term)
+      } else if (type === 'array') {
+
+      } else {
+        if (tree.type==='mixed') {
+          let thistree = tree.children.find(_ => _.type === type)
+          if (thistree) {
+            if (thistree.formatter) {
+              return thistree.formatter(data)
+            } else {
+              return prefix + String(data)
+            }
+          } else {
+            return prefix + String(data)
+          }
+        } else {
+          if (tree.formatter) {
+            return tree.formatter(data)
+          } else {
+            return prefix + String(data)
+          }
+        }
+      }
+    },
+    prettyPrint (data, projectionFields) {
+      /*
+        if (this.store.projectionFields.length === 1) { // one field
+          let projection = this.store.projectionFields[0]
+          let result = []
+          let term
+          for (let eachdata of data) {
+            let thisresult
+            if (!projection.extra) { // normal fields
+                let thistree = this.analyser.getTypeByPath(projection.path)
+                let thisdata = this.analyser.getDataByPath(eachdata, projection.path)
+                thisresult = this._prettyPrint(thisdata, thistree, 0)
+            } else { // extra fields
+              if (projection.formatter) {
+                thisresult = projection.formatter(projection.calculate(eachdata))
+              } else {
+                thisresult = projection.calculate(eachdata)
+              }
+            }
+            if (!projection.status.noPreNewline) {
+              term = ['{\n']
+              term.push(`${projection.name}: ${thisresult}`)
+            } else {
+              term = ['{ ']
+              term.push(`${projection.name}: ${thisresult.trim()}`)
+            }
+            if (!projection.status.noNewline) term.push('\n')
+            term.push('},\n')
+            term = term.join('')
+            result.push(term)
+          }
+        } else { // many fields
+        }
+      */
+      for (let eachdata of data) {
+        if (!this.store.projectionFields[0].status.noPreNewline) {
+          term = ['{\n']
+        } else {
+          term = ['{ ']
+        }
+        let plen = this.store.projectionFields.length
+        let projection
+        for (let index=0; index<plen; index++) {
+          projection = this.store.projectionFields[index]
+          let pn = this.store.projectionFields[index+1]
+          let thisresult
+          if (!projection.extra) { // normal fields
+              let thistree = this.analyser.getTypeByPath(projection.path)
+              let thisdata = this.analyser.getDataByPath(eachdata, projection.path)
+              thisresult = this._prettyPrint(thisdata, thistree, 0)
+          } else { // extra fields
+            if (projection.formatter) {
+              thisresult = projection.formatter(projection.calculate(eachdata))
+            } else {
+              thisresult = projection.calculate(eachdata)
+            }
+          }
+          term.push(`${projection.name}: ${thisresult}`)
+          if (!projection.status.noNewline&&(!pn||pn&&!pn.status.noPreNewline)) {
+            term.push(',\n')
+          } else {
+            term.push(', ')
+          }
+        }
+        term.push('},\n')
+        term = term.join('')
+        result.push(term)
+      }
+    },
+    onProjectionChange (newProjects, oldProjects) {
       // can optimize here
-      this.projectedData = {}
-      for (let projection of this.store.projectionFields) {
-        if (!projection.extra) { // normal fields
-          this.projectedData[projection.path] = this.analyser.getValueByPath(this.filteredData, projection.path)
-        } else { // extra fields
-          this.projectedData[projection.path] = this.data.map(_ => projection.calculate(_))
+      if (!oldProjects||newProjects.length!==oldProjects.length) {
+        this.projectedData = {}
+        for (let projection of this.store.projectionFields) {
+          if (!projection.extra) { // normal fields
+            this.projectedData[projection.path] = this.analyser.getValueByPath(this.filteredData, projection.path)
+          } else { // extra fields
+            this.projectedData[projection.path] = this.data.map(_ => projection.calculate(_))
+          }
         }
       }
       // projectionStrings
       if (this.projectionFields.length===0) { // no fields
         this.projectedStrings = []
       } else {
-        this.projectedStrings = ['[']
         for (let eachdata of this.filteredData) {
-          let term
-          if (this.store.projectionFields.length === 1) { // one field
-            let projection = this.store.projectionFields[0]
-            let result
-            if (!projection.extra) { // normal fields
-              result = this.analyser.getValueByPath(eachdata, projection.path)
-            } else { // extra fields
-              result = this.data.map(_ => projection.calculate(_))
-            }
-            term = ['{']
-            if (!projection.status.noPreCR) term.push('\n')
-            term.push(result)
-            if (!projection.status.noCR) term.push('\n')
-            term.push('},')
-          } else { // many fields
-            if (!this.store.projectionFields[0].status.noPreCR) item.push('\n')
-            let before = this.store.projectionFields.slice(0,-1)
-            let next = this.store.projectionFields.slice(1)
-            let len = before.length
-            for (let index=0; index<len; index++) {
-              pb = before[index]
-              pn = next[index]
-            }
-            for (let projection of this.store.projectionFields) {
-              if (!projection.extra) { // normal fields
-                this.projectedData[projection.path] = this.analyser.getValueByPath(this.filteredData, projection.path)
-              } else { // extra fields
-                this.projectedData[projection.path] = this.data.map(_ => projection.calculate(_))
-              }
-            }
-
-          }
+          let term = this.prettyPrint(eachdata, this.projectionFields, this.tree)
           this.projectedStrings.push(term)
         }
       }

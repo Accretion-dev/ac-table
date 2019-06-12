@@ -405,7 +405,7 @@ class JsonAnalyser {
     }
   }
   _getTypeByPath (tree, paths) {
-    if (paths.length === 0) return _.pick(tree, ['array', 'type', 'count', 'null', 'path', 'counts', 'arrayType', 'arrayCounts', 'children'])
+    if (paths.length === 0) return tree
     let [head, ...tail] = paths
     if (head.includes(this.arrayDelimiter)) {
       head = head.replace(

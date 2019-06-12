@@ -182,13 +182,6 @@ class JsonAnalyser {
       tree.type = key
       mixed = false
       delete tree.counts
-    } else if (keys.length===2 && keys.includes('null')) {
-      let key = keys[0] === 'null' ? keys[1] : keys[0]
-      tree.count = tree.counts[key]
-      tree.null = tree.counts.null
-      tree.type = key
-      mixed = false
-      delete tree.counts
     }
     if (mixed) {
       tree.type = 'mixed'
@@ -222,7 +215,7 @@ class JsonAnalyser {
           )
           tree.children.push(thisObj)
           delete tree.object
-        } else if (key !== 'null') {
+        } else {
           tree.children.push({
             name,
             path: `${path}${this.typeDelimiter}${key}`,

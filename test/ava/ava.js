@@ -168,7 +168,7 @@ function isNull(_) {
   return _ === null
 }
 
-test('test single json explore syntax', t => {
+test.only('test single json explore syntax', t => {
   console.log('will take a long time...')
   let example
   let configs = {
@@ -183,14 +183,16 @@ test('test single json explore syntax', t => {
   }
   let array_length = configs.A_string + configs.A_number + configs.A_date + configs.A_null + configs.A_array + configs.A_object
   try {
-    let str = fs.readFileSync('./data/example.json')
+    let str = fs.readFileSync('../data/example.json')
+    console.log('using old example')
     example = JSON.parse(str)
     console.log('use old example')
   } catch (e) {
+    console.log('generating new example')
     example = makeNestedJson(null, '', configs)
     let str = JSON.stringify(example)
-    fs.writeFileSync('./data/example.json', str)
-    console.log('gen new example')
+    fs.writeFileSync('../data/example.json', str)
+    console.log('generated new example')
   }
   let analyser = new JsonAnalyser()
   let get = _ => analyser.getValueByPath(example,_)
@@ -3790,7 +3792,7 @@ test('test single json explore syntax', t => {
   if (vglobal.anybad) debugger
   t.pass()
 })
-test.only('test json explore syntax', t => {
+test('test json explore syntax', t => {
   let analyser = new JsonAnalyser()
   let result = analyser.analysis(data)
   let types = {

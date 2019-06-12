@@ -566,39 +566,6 @@ export default {
       }
     },
     prettyPrint (data, projectionFields) {
-      /*
-        if (this.store.projectionFields.length === 1) { // one field
-          let projection = this.store.projectionFields[0]
-          let result = []
-          let term
-          for (let eachdata of data) {
-            let thisresult
-            if (!projection.extra) { // normal fields
-                let thistree = this.analyser.getTypeByPath(projection.path)
-                let thisdata = this.analyser.getDataByPath(eachdata, projection.path)
-                thisresult = this._prettyPrint(thisdata, thistree, 0)
-            } else { // extra fields
-              if (projection.formatter) {
-                thisresult = projection.formatter(projection.calculate(eachdata))
-              } else {
-                thisresult = projection.calculate(eachdata)
-              }
-            }
-            if (!projection.status.noPreNewline) {
-              term = ['{\n']
-              term.push(`${projection.name}: ${thisresult}`)
-            } else {
-              term = ['{ ']
-              term.push(`${projection.name}: ${thisresult.trim()}`)
-            }
-            if (!projection.status.noNewline) term.push('\n')
-            term.push('},\n')
-            term = term.join('')
-            result.push(term)
-          }
-        } else { // many fields
-        }
-      */
       for (let eachdata of data) {
         if (!this.store.projectionFields[0].status.noPreNewline) {
           term = ['{\n']

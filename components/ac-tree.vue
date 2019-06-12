@@ -49,18 +49,19 @@ export default {
         this.nodes[selected].updateSelected(true)
       }
     }
+    //console.log('nodes:', this.nodes)
   },
   methods: {
     selectNode(newObj, oldObj) {
-      if (oldObj&&this.nodes[oldObj]) {
+      if (oldObj!==undefined&&this.nodes[oldObj]) {
         this.nodes[oldObj].updateSelected(false)
       }
-      if (newObj&&this.nodes[newObj]&&!this.nodes[newObj].tree.root) {
+      if (newObj!==undefined&&this.nodes[newObj]) {
         this.nodes[newObj].updateSelected(true)
       }
     },
     foldSelected(status) {
-      if (this.treeState.selected) {
+      if (this.treeState.selected !== undefined) {
         let node = this.nodes[this.treeState.selected]
         if (node) node.updateFold(status)
       }
@@ -140,12 +141,16 @@ export default {
       }
     },
     selectUP (node) {
+      if (node.tree.root) {
+        this.treeState.selected = this.getLastChildren(this.tree)
+        return
+      }
       if (node.index===0) {
-        if (node.$parent.tree.root) { // go to last
-          this.treeState.selected = this.getLastChildren(this.tree)
-        } else { // go to its parent
-          this.treeState.selected = node.$parent.tree.path
-        }
+        //if (node.$parent.tree.root) { // go to last
+        //  this.treeState.selected = this.getLastChildren(this.tree)
+        //} else { // go to its parent
+          this.treeState.selected = node.$parent.tree.path // not skip root
+        //}
       } else { // go to previous sibling or the last child of it
         let previousSibling = node.$parent.tree.children[node.index-1]
         let path = this.getLastChildren(previousSibling)
@@ -153,6 +158,10 @@ export default {
       }
     },
     selectDOWN (node) {
+      if (node.tree.root) {
+        this.treeState.selected = node.tree.children[0].path
+        return
+      }
       if (node.tree.status.open&&node.tree.children&&node.tree.children.length) { // go to its first child
         this.treeState.selected = node.tree.children[0].path
       } else if (node.index===node.siblingCount-1) { // go to its parent's next sibling

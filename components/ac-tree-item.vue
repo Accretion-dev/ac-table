@@ -13,9 +13,10 @@
           :class="[`${prefixCls}-folder`, 'ac-unselectable']"
           @mouseover="overBody"
           @mouseleave="leaveBody"
+          @click.stop="onclick($event, true)"
           v-if="!this.tree.root"
         >
-          <span> ► </span>
+          <span > ► </span>
           <span ref="folderOpen" :class="`${prefixCls}-folder-open`" v-show="tree.status.open"> ▼ </span>
         </span>
         <span :class="`${prefixCls}-title`" @mouseover="overBody" @mouseleave="leaveBody">
@@ -211,6 +212,7 @@ export default {
       }
     },
     updateFold (value) {
+      if (this.tree.root) return
       if (value===undefined) value = !this.tree.status.open
       if (this.tree.status.open!=value) {
         this.tree.status.open = value
@@ -238,7 +240,7 @@ export default {
       }
     },
     overBody (event) {
-      if (this.tree.root) return
+      if(this.tree.root) return
       this.$el.style.setProperty('background', '#d8ffd7')
       this.treeState.comments = {y:this.$el.getBoundingClientRect().y, comments: this.comments}
       //this.$refs.comments.style.setProperty('display', 'unset')
@@ -260,11 +262,18 @@ export default {
         this.$refs.vbar.style.removeProperty('background')
       }
     },
-    onclick (event) {
-      if(this.tree.root) return
+    onclick (event, direct) {
       const goodType = ['array', 'object', 'mixed']
+      if (this.tree.root) {
+        this.$emit('update', {treeState:{selected: this.tree.path}}, this.tree, this)
+        return
+      }
       if (goodType.includes(this.tree.type)) {
-        this.updateFold(!this.tree.status.open)
+        if (this.treeState.selected === this.tree.path || direct) {
+          this.updateFold(!this.tree.status.open)
+        } else {
+          this.$emit('update', {treeState:{selected: this.tree.path}}, this.tree, this)
+        }
       } else {
         this.$emit('update', {treeState:{selected: this.tree.path}}, this.tree, this)
       }

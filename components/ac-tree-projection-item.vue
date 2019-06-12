@@ -22,7 +22,8 @@ const prefixCls = 'ac-tree-projection-item'
 const typeMap = {
   'string': 'S',
   'boolean': 'B',
-  'number': 'N',
+  'number': '1',
+  'null': 'N',
   'date': 'D',
   'mixed': 'M',
   'array': 'A',
@@ -49,7 +50,7 @@ export default {
       if (!this.data.type) { return null }
       if (this.data.arrayType) {
         return {
-          type: 'R_'+typeMap[this.data.arrayType],
+          type: 'B_'+typeMap[this.data.arrayType],
           array: true
         }
       } else {

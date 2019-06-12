@@ -89,7 +89,8 @@ import icons from '../icons/icons.vue'
 const typeMap = {
   'string': 'S',
   'boolean': 'B',
-  'number': 'N',
+  'number': '1',
+  'null': 'N',
   'date': 'D',
   'mixed': 'M',
   'array': 'A',
@@ -136,7 +137,7 @@ export default {
       if (!this.tree.type) { return {type: 'B_U', array: false} }
       if (this.tree.arrayType) {
         return {
-          type: 'R_'+typeMap[this.tree.arrayType],
+          type: 'B_'+typeMap[this.tree.arrayType],
           array: true
         }
       } else {
@@ -226,6 +227,7 @@ export default {
       }
     },
     updateProjection () {
+      if (this.tree.root) return
       let status = !this.tree.status.projection
       this.$emit('update', {status:{projection:status}}, this.tree, this)
     },

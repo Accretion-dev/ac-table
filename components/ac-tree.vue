@@ -230,6 +230,7 @@ export default {
 $pre: ac-table-tree;
 .#{$pre} {
   outline:none;
+  flex: 1;
 }
 .#{$pre}-tools {
   height: 1rem;

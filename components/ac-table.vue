@@ -10,7 +10,7 @@
       :class="`${prefixCls}-tree-comments`"
       v-show="store.treeState.comments&&!this.loading"
       >{{ store.treeState.comments?store.treeState.comments.comments:"" }}</pre>
-      <div :class="`${prefixCls}-masker`" :style="{'z-index': masker?100:-1}" @mouseover="blockMouseOver"/>
+      <div :class="`${prefixCls}-masker`" :style="{'z-index': masker?100:-1}" @mouseover=""/>
     </div>
     <div :class="`${prefixCls}-show-button`"> </div>
     <div :class="`${prefixCls}-header`">
@@ -21,6 +21,17 @@
       >
         T
       </span>
+      <div :class="`${prefixCls}-sidebar-tab`" @click="changeSidebar">
+        <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">tree</span>
+        </span>
+        <span name="projection" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='projection'}">
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">projection</span>
+        </span>
+        <span name="extra" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='extra'}">
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">extra</span>
+        </span>
+      </div>
       <span @click="cleanCurrentDatabase">
         cleanCuurent
       </span>
@@ -36,17 +47,6 @@
       </template>
       <template v-else>
         <div ref="sidebar-wrapper" :class="`${prefixCls}-sidebar-wrapper`" v-show="status.sidebarShow" @keydown="sidebarKeydown">
-          <div :class="`${prefixCls}-sidebar-tab`" @click="changeSidebar">
-            <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
-              <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">tree</span>
-            </span>
-            <span name="projection" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='projection'}">
-              <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">projection</span>
-            </span>
-            <span name="extra" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='extra'}">
-              <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">extra</span>
-            </span>
-          </div>
           <div ref="sidebar" :class="`${prefixCls}-sidebar`">
             <ac-tree ref="tree"
               :tree="store.tree"
@@ -71,7 +71,9 @@
           <span style="width:1px; background:gray; margin-right:2px;pointer-events: none;"/>
         </div>
         <div :class="`${prefixCls}-content`">
-          <div>
+          <div :class="`${prefixCls}-print-line`" v-for="(data,index) in projectedStrings">
+            <span :class="`${prefixCls}-print-index`" :style="{width: `${digital}em`}">{{index}}</span>
+            <pre :class="`${prefixCls}-print-data`">{{data}}</pre>
           </div>
         </div>
       </template>
@@ -172,6 +174,15 @@ export default {
     },
   },
   computed: {
+    digital () {
+      let N = this.projectedStrings.length
+      let count = 1
+      while(N>=1) {
+        N = N/10
+        count += 1
+      }
+      return count/2
+    },
     masker () {
       return this.status.resizing
     },
@@ -180,7 +191,7 @@ export default {
     },
     defaultProjection () {
       return this.tree.children.map(_ => _.path)
-    }
+    },
   },
   created () {
     let watcher = (value) => {
@@ -199,11 +210,14 @@ export default {
       }
     }
     this.$watch('store.status.sidebar', watcher)
+    this.$watch('store.projectionFields', this.onProjectionChange)
 
     this.initDatabase().catch(error => {// in case of error, do not use database
       console.error(error)
       this.loading = false
       this.initTree()
+    }).then(_ => {
+      this.onFilterChange()
     })
   },
   mounted () {
@@ -372,7 +386,7 @@ export default {
       this.store.status.sidebar = tabs[nIndex]
     },
     // about show
-    addProjection(tree, extra) {
+    addProjection (tree, extra) {
       tree.status.projection = true
       let toAdd = {
         name: tree.name,
@@ -388,7 +402,7 @@ export default {
       }
       this.store.projectionFields.push(toAdd)
     },
-    removeProjection(obj) {
+    removeProjection (obj) {
       let index = this.store.projectionFields.findIndex(_ => _===obj)
       let tree
       if (obj.extra) {
@@ -399,14 +413,16 @@ export default {
       tree.status.projection = false
       this.store.projectionFields.splice(index, 1)
     },
-    updateProjectionStatus(obj) {
+    updateProjectionStatus (obj) {
       //let tree = this.$refs.tree.nodes[obj.path].tree
       //let status = obj.status
       //tree.updateNewline(status)
       let project = this.store.projectionFields.find(_ => _.path===obj.path)
       let noFirstNewline = obj.status.noFirstNewline
       let noNewline = obj.status.noNewline
-      Object.assign(project.status, {noFirstNewline, noNewline})
+      project.status.noFirstNewline = noFirstNewline
+      project.status.noNewline = noNewline
+      this.onProjectionChange(this.store.projectionFields, this.store.projectionFields)
     },
     // others
     onTreeUpdate (change, value, origin) {
@@ -448,12 +464,12 @@ export default {
         }
       }
     },
-    changeSidebar(event) {
+    changeSidebar (event) {
       let target = event.target
       this.store.status.sidebar = target.getAttribute('name')
       this.updateDatabase(['status'])
     },
-    statusBarInfo(text, type, timeout) {
+    statusBarInfo (text, type, timeout) {
       if (!timeout) timeout = 3000
       if (type) this.message.type = type
       this.message.text = text
@@ -488,100 +504,96 @@ export default {
         sidebar.style.removeProperty('width')
       }
     },
-    blockMouseOver (event) { },
     // about filter and projection
-    onFilterChange() {
+    onFilterChange (newValue, oldValue) {
       this.filteredData = this.data
+      this.onProjectionChange(this.store.projectionFields, this.store.projectionFields)
     },
     _prettyPrint (data, tree, level) {
-      let result = []
       let type = this.analyser.getType(data)
-      let prefix = [...Array(2*level).keys()].map(_ => ' ').join('')
+      let prefix0 = [...Array(2*level).keys()].map(_ => ' ').join('')
+      let prefix1 = [...Array(2*(level+1)).keys()].map(_ => ' ').join('')
+      let term, thistree, thisdata
+      if (!(tree)) {
+        return String(data)+',\n'+prefix0
+      }
+      if (tree.type==='mixed') {
+        tree = tree.children.find(_ => _.type === type)
+      }
+      if (!(tree)) {
+        return String(data)+',\n'+prefix0
+      }
       if (type === 'object') {
-        let item
-        if (!(tree&&tree.type==="object"&&tree.children)) {
-          throw Error(`Error data format, data:\n${data}, tree:\n${tree}`)
-        }
         let keys = Object.keys(data)
-        let firstChild = tree.children.find(_ => _.name === keys[0])
-        if (!firstChild) {
-          term = ['{\n']
-        } else if (firstChild.type === 'mixed') {
-          let data0 = data[firstChild.name]
-          let firstType = this.analyser.getType(data0)
-          let thistree = tree.children.find(_ => _.type === type)
-          if (thistree) {
-            if (!thistree.status.noPreNewline) {
-              term = ['{\n']
-            } else {
-              term = ['{ ']
-            }
-          } else {
-            term = ['{\n']
-          }
+        if (!tree.status.noFirstNewline) {
+          term = ['{\n'+prefix1]
         } else {
-          if (!firstChild.status.noPreNewline) {
-            term = ['{\n']
-          } else {
-            term = ['{ ']
-          }
+          term = ['{ ']
         }
-        for (let index=0; index<tree.children.length; index++) {
-          let thistree = tree.children[index]
-          let pn = tree.children[index+1]
-          let name = thistree.name
-          let thisdata = data[name]
-          let thisresult = this._prettyPrint(thisdata, thistree, level+1)
-          term.push(`${thistree.name}: ${thisresult}`)
-          if (!thistree.status.noNewline&&(!pn||pn&&!pn.status.noPreNewline)) {
-            term.push(',\n')
+        for (let key of keys) {
+          thistree = tree.children.find(_ => _.name === key)
+          let thisresult
+          if (!thistree) {
+            thisresult = String(data)
           } else {
-            term.push(', ')
+            name = thistree.name
+            thisdata = data[name]
+            thisresult = this._prettyPrint(thisdata, thistree, level+1)
           }
+          term.push(thisresult)
         }
-        term.push('},\n')
+        term.push('},\n'+prefix0)
         term = term.join('')
-        result.push(term)
+        return term
       } else if (type === 'array') {
-
-      } else {
-        if (tree.type==='mixed') {
-          let thistree = tree.children.find(_ => _.type === type)
-          if (thistree) {
-            if (thistree.formatter) {
-              return thistree.formatter(data)
-            } else {
-              return prefix + String(data)
-            }
-          } else {
-            return prefix + String(data)
-          }
+        if (!tree.status.noFirstNewline) {
+          term = ['[\n'+prefix1]
         } else {
-          if (tree.formatter) {
-            return tree.formatter(data)
-          } else {
-            return prefix + String(data)
-          }
+          term = ['[ ']
+        }
+        for (let eachdata of data) {
+          let thisresult = this._prettyPrint(eachdata, tree.children[0], level+1)
+          term.push(thisresult)
+        }
+        if (!tree.status.noNewline) {
+          term.push(',\n'+prefix0)
+        } else {
+          term.push(', ')
+        }
+        term = term.join('')
+        return term
+      } else {
+        let result
+        if (tree.formatter) {
+          result = tree.formatter(data)
+        } else {
+          result = String(data)
+        }
+        if (!tree.status.noNewline) {
+          return `${tree.name}: ${result},\n${prefix0}`
+        } else {
+          return `${tree.name}: ${result}, `
         }
       }
     },
     prettyPrint (data, projectionFields) {
+      let plen = this.store.projectionFields.length
+      let term
+      let projection
+      let result = []
       for (let eachdata of data) {
-        if (!this.store.projectionFields[0].status.noPreNewline) {
-          term = ['{\n']
+        if (!this.store.tree.status.noFirstNewline) {
+          term = ['{\n  ']
         } else {
           term = ['{ ']
         }
-        let plen = this.store.projectionFields.length
-        let projection
         for (let index=0; index<plen; index++) {
           projection = this.store.projectionFields[index]
-          let pn = this.store.projectionFields[index+1]
           let thisresult
           if (!projection.extra) { // normal fields
               let thistree = this.analyser.getTypeByPath(projection.path)
-              let thisdata = this.analyser.getDataByPath(eachdata, projection.path)
-              thisresult = this._prettyPrint(thisdata, thistree, 0)
+              let thisdata = this.analyser.getValueByPath(eachdata, projection.path)
+              thisresult = this._prettyPrint(thisdata, thistree, 1)
           } else { // extra fields
             if (projection.formatter) {
               thisresult = projection.formatter(projection.calculate(eachdata))
@@ -589,19 +601,16 @@ export default {
               thisresult = projection.calculate(eachdata)
             }
           }
-          term.push(`${projection.name}: ${thisresult}`)
-          if (!projection.status.noNewline&&(!pn||pn&&!pn.status.noPreNewline)) {
-            term.push(',\n')
-          } else {
-            term.push(', ')
-          }
+          term.push(thisresult)
         }
         term.push('},\n')
         term = term.join('')
         result.push(term)
       }
+      return result
     },
     onProjectionChange (newProjects, oldProjects) {
+      console.log({newProjects, oldProjects})
       // can optimize here
       if (!oldProjects||newProjects.length!==oldProjects.length) {
         this.projectedData = {}
@@ -614,13 +623,11 @@ export default {
         }
       }
       // projectionStrings
-      if (this.projectionFields.length===0) { // no fields
+      if (this.store.projectionFields.length===0) { // no fields
         this.projectedStrings = []
       } else {
-        for (let eachdata of this.filteredData) {
-          let term = this.prettyPrint(eachdata, this.projectionFields, this.tree)
-          this.projectedStrings.push(term)
-        }
+        let result = this.prettyPrint(this.filteredData, this.store.projectionFields, this.tree)
+        this.projectedStrings = result
       }
     },
   }
@@ -679,9 +686,13 @@ $fontFamily: "'Courier New', Courier, monospace";
 .#{$pre}-sidebar-wrapper {
   display: flex;
   flex-direction: column;
-  overflow: scroll;
+  overflow: overlay;
   position: relative;
+  flex-shrink: 0;
 }
+//::-webkit-scrollbar {
+//  display: none;
+//}
 .#{$pre}-resizer {
   cursor: ew-resize;
   display: flex;
@@ -690,11 +701,10 @@ $fontFamily: "'Courier New', Courier, monospace";
   background: gray;
 }
 .#{$pre}-sidebar-tab {
-  background: #f7faff;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #cfcfcf;
+  background: #d8ffd775;
   .#{$pre}-sidebar-tab-selected {
     background: white;
   }
@@ -707,8 +717,28 @@ $fontFamily: "'Courier New', Courier, monospace";
   background: #d8ffd7;
 }
 .#{$pre}-content {
-  //background: #8bc34a;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: overlay;
   flex: 1;
+  pre {
+    margin: 0;
+    padding: 0;
+  }
+}
+.#{$pre}-content-index-number {
+  height: 100%;
+  z-index: -1;
+}
+.#{$pre}-print-line {
+  display: flex;
+}
+.#{$pre}-print-index {
+  background: #fefd9457;
+  text-align: right;
+}
+.#{$pre}-print-data {
 }
 .#{$pre}-footer {
   height: 2em;

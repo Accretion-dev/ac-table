@@ -9,50 +9,56 @@
     <template v-if="tree.children">  <!--not root but have children-->
       <div ref="content" :class="`${prefixCls}-content`">
         <span
-          ref='folder'
+          v-if="!tree.root"
+          ref="folder"
           :class="[`${prefixCls}-folder`, 'ac-unselectable']"
           @mouseover="overBody"
           @mouseleave="leaveBody"
           @click.stop="onclick($event, true)"
-          v-if="!this.tree.root"
         >
-          <span > ► </span>
-          <span ref="folderOpen" :class="`${prefixCls}-folder-open`" v-show="tree.status.open"> ▼ </span>
+          <span> ► </span>
+          <span v-show="tree.status.open" ref="folderOpen" :class="`${prefixCls}-folder-open`"> ▼ </span>
         </span>
         <span :class="`${prefixCls}-title`" @mouseover="overBody" @mouseleave="leaveBody">
           <span v-if="icon.array">
-            <span class="ac-unselectable">[</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">]</span>
+            <span class="ac-unselectable">[</span>
+            <icons :name="icon.type" size="0.9em" />
+            <span class="ac-unselectable">]</span>
           </span>
           <span v-else>
-            <span class="ac-unselectable">&nbsp;</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">&nbsp;</span>
+            <span class="ac-unselectable">&nbsp;</span>
+            <icons :name="icon.type" size="0.9em" />
+            <span class="ac-unselectable">&nbsp;</span>
           </span>
-          <span ref="name" :class="{
+          <span
+            ref="name"
+            :class="{
               [`${prefixCls}-name`]:true,
               ['ac-unselectable']:true,
               [`${prefixCls}-projection`]: projection,
             }"
           >
-            <span style="padding-left:0.1rem; padding-right:0.3rem;"> {{tree.name}} </span>
-            <icons :style="{visibility: tree.status.noFirstNewline?'visible':'hidden'}" name="no_pre_newline" size="0.9rem"/>
-            <icons :style="{visibility: tree.status.noNewline?'visible':'hidden'}" name="no_newline" size="0.9rem"/>
+            <span style="padding-left:0.1rem; padding-right:0.3rem;"> {{ tree.name }} </span>
+            <icons :style="{visibility: tree.status.noFirstNewline?'visible':'hidden'}" name="no_pre_newline" size="0.9rem" />
+            <icons :style="{visibility: tree.status.noNewline?'visible':'hidden'}" name="no_newline" size="0.9rem" />
           </span>
         </span>
       </div>
-      <div ref="subtree" :class="`${prefixCls}-subtree`" v-show="tree.status.open">
+      <div v-show="tree.status.open" ref="subtree" :class="`${prefixCls}-subtree`">
         <div ref="vbar"
              :class="`${prefixCls}-vbar`"
              @mouseover="overBody"
              @mouseleave="leaveBody"
         />
         <ac-tree-item
-           ref="subtrees"
-           v-for="(child,index) of tree.children"
+          v-for="(child,thisindex) of tree.children"
+          ref="subtrees"
           :key="child.path"
-          :index="index"
-          :siblingCount="tree.children.length"
+          :index="thisindex"
+          :sibling-count="tree.children.length"
           :tree="child"
           :level="level+1"
-          :treeState="treeState"
+          :tree-state="treeState"
           :nodes="nodes"
           @update="onupdate"
         />
@@ -62,20 +68,26 @@
       <div ref="content" :class="`${prefixCls}-content`">
         <span :class="`${prefixCls}-title`" @mouseover="overBody" @mouseleave="leaveBody">
           <span v-if="icon.array">
-            <span class="ac-unselectable">[</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">]</span>
+            <span class="ac-unselectable">[</span>
+            <icons :name="icon.type" size="0.9em" />
+            <span class="ac-unselectable">]</span>
           </span>
           <span v-else>
-            <span class="ac-unselectable">&nbsp;</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">&nbsp;</span>
+            <span class="ac-unselectable">&nbsp;</span>
+            <icons size="0.9em" :name="icon.type" />
+            <span class="ac-unselectable">&nbsp;</span>
           </span>
-          <span ref="name" :class="{
+          <span
+            ref="name"
+            :class="{
               [`${prefixCls}-name`]:true,
               'ac-unselectable':true,
               [`${prefixCls}-projection`]: projection,
             }"
           >
-            <span style="padding-left:0.1rem; padding-right:0.3rem;"> {{tree.name}} </span>
-            <icons :style="{visibility: tree.status.noFirstNewline?'visible':'hidden'}" name="no_pre_newline" size="0.9rem"/>
-            <icons :style="{visibility: tree.status.noNewline?'visible':'hidden'}" name="no_newline" size="0.9rem"/>
+            <span style="padding-left:0.1rem; padding-right:0.3rem;"> {{ tree.name }} </span>
+            <icons :style="{visibility: tree.status.noFirstNewline?'visible':'hidden'}" name="no_pre_newline" size="0.9rem" />
+            <icons :style="{visibility: tree.status.noNewline?'visible':'hidden'}" name="no_newline" size="0.9rem" />
           </span>
         </span>
       </div>
@@ -106,8 +118,8 @@ export default {
     level: { type: Number, default:0 },
     treeState: { type: Object, required: true },
     nodes: { type: Object, required: true },
-    index: { type: Number },
-    siblingCount: { type: Number },
+    index: { type: Number, default: 0},
+    siblingCount: { type: Number, default: 0},
   },
   data () {
     return {
@@ -157,6 +169,9 @@ export default {
   },
   created () {
     this.nodes[this.tree.path] = this
+  },
+  beforeCreate: function () {
+    this.$options.components.acTreeItem = require('./ac-tree-item.vue').default
   },
   methods: {
     onlyUpdateFold (value) {
@@ -283,9 +298,6 @@ export default {
     onupdate (change, value, origin) {
       this.$emit('update', change, value, origin)
     },
-  },
-  beforeCreate: function () {
-    this.$options.components.acTreeItem = require('./ac-tree-item.vue').default
   },
 }
 </script>

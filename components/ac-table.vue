@@ -1,18 +1,22 @@
 <template>
-  <div :class="`${prefixCls}`"
+  <div
+    :class="`${prefixCls}`"
     @mousedown="mousedown"
     @mouseup="mouseup"
     @mousemove="mousemove"
     @dblclick="doubleclick"
   >
     <div>
-      <pre ref="tree-comments"
-      :class="`${prefixCls}-tree-comments`"
-      v-show="store.treeState.comments&&!this.loading"
+      <pre
+        v-show="store.treeState.comments&&!loading"
+        ref="tree-comments"
+        :class="`${prefixCls}-tree-comments`"
       >{{ store.treeState.comments?store.treeState.comments.comments:"" }}</pre>
-      <div :class="`${prefixCls}-masker`" :style="{'z-index': masker?100:-1}" @mouseover=""/>
+      <div :class="`${prefixCls}-masker`" :style="{'z-index': masker?100:-1}" />
     </div>
-    <div :class="`${prefixCls}-show-button`"> </div>
+    <div :class="`${prefixCls}-show-button`">
+      B
+    </div>
     <div :class="`${prefixCls}-header`">
       <span
         :class="`${prefixCls}-toolbar`"
@@ -46,34 +50,36 @@
         </div>
       </template>
       <template v-else>
-        <div ref="sidebar-wrapper" :class="`${prefixCls}-sidebar-wrapper`" v-show="status.sidebarShow" @keydown="sidebarKeydown">
+        <div v-show="status.sidebarShow" ref="sidebar-wrapper" :class="`${prefixCls}-sidebar-wrapper`" @keydown="sidebarKeydown">
           <div ref="sidebar" :class="`${prefixCls}-sidebar`">
-            <ac-tree ref="tree"
-              :tree="store.tree"
-              :treeState="store.treeState"
-              @update="onTreeUpdate"
+            <ac-tree
               v-show="store.status.sidebar==='tree'"
+              ref="tree"
+              :tree="store.tree"
+              :tree-state="store.treeState"
+              @update="onTreeUpdate"
             />
-            <ac-tree-projection ref="projection"
-              :projections="store.projectionFields"
+            <ac-tree-projection
               v-show="store.status.sidebar==='projection'"
+              ref="projection"
+              :projections="store.projectionFields"
             />
-            <div ref="extra" v-show="store.status.sidebar==='extra'" tabindex="0">
+            <div v-show="store.status.sidebar==='extra'" ref="extra" tabindex="0">
               extra terms
             </div>
           </div>
         </div>
-        <div ref="resizer"
-             :class="{[`${prefixCls}-resizer`]: true, [`${prefixCls}-resizer-selected`]:this.status.resizing}"
+        <div v-show="status.sidebarShow"
+             ref="resizer"
+             :class="{[`${prefixCls}-resizer`]: true, [`${prefixCls}-resizer-selected`]:status.resizing}"
              :style="{'z-index': masker?999:'unset'}"
-             v-show="status.sidebarShow"
         >
-          <span style="width:1px; background:gray; margin-right:2px;pointer-events: none;"/>
+          <span style="width:1px; background:gray; margin-right:2px;pointer-events: none;" />
         </div>
         <div :class="`${prefixCls}-content`">
-          <div :class="`${prefixCls}-print-line`" v-for="(data,index) in projectedStrings">
-            <span :class="`${prefixCls}-print-index`" :style="{width: `${digital}em`}">{{index}}</span>
-            <pre :class="`${prefixCls}-print-data`">{{data}}</pre>
+          <div v-for="(pdata,index) in projectedStrings" :key="index" :class="`${prefixCls}-print-line`">
+            <span :class="`${prefixCls}-print-index`" :style="{width: `${digital}em`}">{{ index }}</span>
+            <pre :class="`${prefixCls}-print-data`">{{ pdata }}</pre>
           </div>
         </div>
       </template>
@@ -82,11 +88,11 @@
       <span>
         {{ data.length }}
       </span>
-      <span :class="`${prefixCls}-status-message`"
+      <span v-show="message.show"
+            :class="`${prefixCls}-status-message`"
             :style="{'font-color':`${messageColor[message.type]}`}"
-            v-show="message.show"
       >
-        {{message.text}}
+        {{ message.text }}
       </span>
     </div>
   </div>
@@ -113,7 +119,7 @@ TODO:
 
 export default {
   name: 'ac-table',
-  components: {acTree, acTreeProjection, icons},
+  components: {acTree, acTreeProjection},
   props: {
     data: { type: Array, default () { return [] } },
     uid: { type: String, default () { return (new Date()).toISOString() }},
@@ -161,18 +167,6 @@ export default {
       }
     }
   },
-  watch: {
-    'store.treeState.comments' (value) {
-      if (!value) return
-      let el = this.$refs['tree-comments']
-      let resizer = this.$refs.resizer
-      if (!resizer || !el) return
-      let y = value.y
-      let x = resizer.getBoundingClientRect().x
-      el.style.setProperty('left', x+"px")
-      el.style.setProperty('top', y+"px")
-    },
-  },
   computed: {
     digital () {
       let N = this.projectedStrings.length
@@ -191,6 +185,18 @@ export default {
     },
     defaultProjection () {
       return this.tree.children.map(_ => _.path)
+    },
+  },
+  watch: {
+    'store.treeState.comments' (value) {
+      if (!value) return
+      let el = this.$refs['tree-comments']
+      let resizer = this.$refs.resizer
+      if (!resizer || !el) return
+      let y = value.y
+      let x = resizer.getBoundingClientRect().x
+      el.style.setProperty('left', x+"px")
+      el.style.setProperty('top', y+"px")
     },
   },
   created () {

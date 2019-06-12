@@ -1,7 +1,9 @@
 <template>
-  <div :class="`${prefixCls}`"
-       tabindex="0"
-       @keydown="keydown">
+  <div
+    :class="`${prefixCls}`"
+    tabindex="0"
+    @keydown="keydown"
+  >
     <div :class="`${prefixCls}-tools`">
       <span
         :class="`${prefixCls}-tools-button`"
@@ -13,7 +15,13 @@
       > - </span>
     </div>
     <div :class="`${prefixCls}-content`">
-      <ac-tree-item ref="tree-root" :tree="tree" :treeState="treeState" :nodes="nodes" @update="onupdate"/>
+      <ac-tree-item
+        ref="tree-root"
+        :tree="tree"
+        :tree-state="treeState"
+        :nodes="nodes"
+        @update="onupdate"
+      />
     </div>
   </div>
 </template>
@@ -35,9 +43,9 @@ export default {
       nodes : { },
     }
   },
-  watch:{
-  },
   computed: {
+  },
+  watch:{
   },
   created() {
     this.$watch('treeState.selected', this.selectNode)

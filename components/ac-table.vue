@@ -108,11 +108,12 @@ import icons from '../icons/icons.vue'
 
 /*
 TODO:
+* config system
+* watch change of data, struct, configs and filters
 * select, keyboard of projection
 * postive and negative mode of projection
 * pretty printer with
   * noNewline and noPreNewline
-  * projectionFields
 
 ... more type of data (root could be array or simple type)
 */
@@ -122,6 +123,9 @@ export default {
   components: {acTree, acTreeProjection},
   props: {
     data: { type: Array, default () { return [] } },
+    configs: { type: Object, default: null },
+    struct: { type: Object, default: null },
+    filters: { type: Object, default: null },
     uid: { type: String, default () { return (new Date()).toISOString() }},
   },
   data () {
@@ -164,6 +168,15 @@ export default {
       messageColor: {
         'info': 'blue',
         'error': 'red',
+      },
+      configDetail: {
+        projection: {
+          showUndefined: { type: 'boolean', default: true, },
+          maxItem: { type: 'number', default: 100, },
+          moreCount: { type: 'number', default: 100 },
+          pageMode: { type: 'boolean', default: false },
+          pageSize: { type: 'number', default: 1 },
+        },
       }
     }
   },
@@ -185,6 +198,8 @@ export default {
     },
     defaultProjection () {
       return this.tree.children.map(_ => _.path)
+    },
+    allConfigs () {
     },
   },
   watch: {
@@ -218,19 +233,23 @@ export default {
     this.$watch('store.status.sidebar', watcher)
     this.$watch('store.projectionFields', this.onProjectionChange)
 
-    this.initDatabase().catch(error => {// in case of error, do not use database
-      console.error(error)
-      this.loading = false
-      this.initTree()
-    }).then(_ => {
-      this.onFilterChange()
-    })
+    this.init()
   },
   mounted () {
   },
   methods: {
+    async init () {
+      try {
+        await this.initDatabase()
+        this.onFilterChange()
+      } catch (e) {
+        console.error(error)
+        this.loading = false
+        this.initTree()
+      }
+    },
     // about database and init
-    async saveState(key, tx) {
+    async saveState (key, tx) {
       let keys
       if (key) {
         keys = [key]
@@ -242,7 +261,7 @@ export default {
         await tx.objectStore(key).put(this.store[key], this.uid)
       }
     },
-    async initDatabase () {
+    async initDatabase (initial = {}) {
       if (!window.indexedDB) {
         throw Error('no support for indexedDB')
       } else {
@@ -546,8 +565,9 @@ export default {
             thisdata = data[name]
             thisresult = this._prettyPrint(thisdata, thistree, level+1)
           }
-          term.push(thisresult)
+          term.push(`${name}: ${thisresult}`)
         }
+        if (term.length)  term[term.length-1] = term[term.length-1].slice(0,-2)
         term.push('},\n'+prefix0)
         term = term.join('')
         return term
@@ -558,13 +578,23 @@ export default {
           term = ['[ ']
         }
         for (let eachdata of data) {
-          let thisresult = this._prettyPrint(eachdata, tree.children[0], level+1)
+          let thisresult
+          if (tree.children) {
+            thisresult = this._prettyPrint(eachdata, tree.children[0], level+1)
+          } else {
+            thisresult = this._prettyPrint(eachdata, tree, level+1)
+          }
           term.push(thisresult)
         }
+        if (term.length !== 1) {
+          term[term.length-1] = term[term.length-1].slice(0,-2)
+        } else { // array is empty, use oneline "[]"
+          term = ['[']
+        }
         if (!tree.status.noNewline) {
-          term.push(',\n'+prefix0)
+          term.push('],\n'+prefix0)
         } else {
-          term.push(', ')
+          term.push('], ')
         }
         term = term.join('')
         return term
@@ -576,9 +606,9 @@ export default {
           result = String(data)
         }
         if (!tree.status.noNewline) {
-          return `${tree.name}: ${result},\n${prefix0}`
+          return `${result},\n${prefix0}`
         } else {
-          return `${tree.name}: ${result}, `
+          return `${result}, `
         }
       }
     },
@@ -607,8 +637,9 @@ export default {
               thisresult = projection.calculate(eachdata)
             }
           }
-          term.push(thisresult)
+          term.push(`${projection.path}: ${thisresult}`)
         }
+        if (term.length) term[term.length-1] = term[term.length-1].slice(0,-2)
         term.push('},\n')
         term = term.join('')
         result.push(term)

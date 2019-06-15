@@ -229,22 +229,7 @@ export default {
   },
   created () {
     // watch for tab change
-    let watcher = (value) => {
-      let el
-      if (value==='tree') {
-        el = this.$refs.tree&&this.$refs.tree.$el
-      } else if (value==='projection') {
-        el = this.$refs.projection&&this.$refs.projection.$el
-      } else if (value==='extra') {
-        el = this.$refs.extra
-      }
-      if (el) {
-        setTimeout(() => {
-          el.focus()
-        },0)
-      }
-    }
-    this.$watch('store.status.sidebar', watcher)
+    this.$watch('store.status.sidebar', this.focusOnSicebar)
     /** TODO
     * when data or configs or projection changed(outside)
       update store
@@ -462,7 +447,18 @@ export default {
     },
     // keyboard
     keydown (event) {
+      console.log(event)
       switch (event.key) {
+        case 'Escape':
+          event.preventDefault()
+          event.stopPropagation()
+          this.status.sidebarShow=!this.status.sidebarShow
+          if (this.status.sidebarShow) {
+            this.focusOnSicebar(this.store.status.sidebar)
+          } else {
+            this.$el.focus()
+          }
+          break
         case 'PageUp':
           event.preventDefault()
           event.stopPropagation()
@@ -500,12 +496,28 @@ export default {
       } else if (page >= maxPage - 1) {
         page = maxPage - 1
       }
-      console.log('change page to ', page)
-      this.onPageChange(page)
-      this.store.status.page = page
-      this.updateDatabase(['status'])
+      if (this.store.status.page !== page) {
+        this.onPageChange(page)
+        this.store.status.page = page
+        this.updateDatabase(['status'])
+      }
     },
     // about show
+    focusOnSicebar (value) {
+      let el
+      if (value==='tree') {
+        el = this.$refs.tree&&this.$refs.tree.$el
+      } else if (value==='projection') {
+        el = this.$refs.projection&&this.$refs.projection.$el
+      } else if (value==='extra') {
+        el = this.$refs.extra
+      }
+      if (el) {
+        setTimeout(() => {
+          el.focus()
+        },0)
+      }
+    },
     addProjection (tree, extra) {
       tree.status.projection = true
       let toAdd = {

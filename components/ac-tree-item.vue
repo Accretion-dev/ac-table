@@ -44,7 +44,7 @@
           </span>
         </span>
       </div>
-      <div v-show="tree.status.open" ref="subtree" :class="`${prefixCls}-subtree`">
+      <div v-if="tree.status.open" ref="subtree" :class="`${prefixCls}-subtree`">
         <div ref="vbar"
              :class="`${prefixCls}-vbar`"
              @mouseover="overBody"

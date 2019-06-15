@@ -1,10 +1,12 @@
 <template>
   <div
     :class="`${prefixCls}`"
+    tabindex="0"
     @mousedown="mousedown"
     @mouseup="mouseup"
     @mousemove="mousemove"
     @dblclick="doubleclick"
+    @keydown.stop="keydown"
   >
     <div>
       <pre
@@ -14,9 +16,6 @@
       >{{ store.treeState.comments?store.treeState.comments.comments:"" }}</pre>
       <div :class="`${prefixCls}-masker`" :style="{'z-index': masker?100:-1}" />
     </div>
-    <div :class="`${prefixCls}-show-button`">
-      B
-    </div>
     <div :class="`${prefixCls}-header`">
       <span
         :class="`${prefixCls}-toolbar`"
@@ -25,7 +24,7 @@
       >
         T
       </span>
-      <div :class="`${prefixCls}-sidebar-tab`" @click="changeSidebar">
+      <div :class="`${prefixCls}-sidebar-tab`" @click="clickChangeSidebar">
         <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
           <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">tree</span>
         </span>
@@ -42,6 +41,9 @@
       <span @click="cleanAllDatabase">
         cleanAll
       </span>
+      <span ref="pageStatus" style="position:absolute; right:0;">
+        <span>{{status.page.page}}({{status.page.start}}~{{status.page.end}})</span>{{"/"}}<span>{{status.page.maxPage}}({{status.page.length}})</span>
+      </span>
     </div>
     <div :class="`${prefixCls}-main`">
       <template v-if="loading">
@@ -50,7 +52,7 @@
         </div>
       </template>
       <template v-else>
-        <div v-show="status.sidebarShow" ref="sidebar-wrapper" :class="`${prefixCls}-sidebar-wrapper`" @keydown="sidebarKeydown">
+        <div v-show="status.sidebarShow" ref="sidebar-wrapper" :class="`${prefixCls}-sidebar-wrapper`">
           <div ref="sidebar" :class="`${prefixCls}-sidebar`">
             <ac-tree
               v-show="store.status.sidebar==='tree'"
@@ -77,8 +79,8 @@
           <span style="width:1px; background:gray; margin-right:2px;pointer-events: none;" />
         </div>
         <div :class="`${prefixCls}-content`">
-          <div v-for="(pdata,index) in projectedStrings" :key="index" :class="`${prefixCls}-print-line`">
-            <span :class="`${prefixCls}-print-index`" :style="{width: `${digital}em`}">{{ index }}</span>
+          <div v-for="(pdata,index) in pageStrings" :key="index" :class="`${prefixCls}-print-line`">
+            <span :class="`${prefixCls}-print-index`" :style="{width: `${digital}em`}">{{ index+status.page.start }}</span>
             <pre :class="`${prefixCls}-print-data`">{{ pdata }}</pre>
           </div>
         </div>
@@ -136,7 +138,9 @@ export default {
       analyser: null,
       filteredData: [],
       projectedData: {},
+      pageData: [],
       projectedStrings: [],
+      pageStrings: [],
       store: {
         tree: {root: true, status:{open:true}},
         treeState: {
@@ -145,13 +149,24 @@ export default {
         },
         extraFields: [],
         projectionFields:[],
+        configs: {},
+        filters: {},
         status: {
           sidebar: 'tree',
+          page: 0,
+          tablePage: 0,
         },
       },
       status: {
         sidebarShow: true,
-        resizing: false
+        resizing: false,
+        page: {
+          maxPage: 0,
+          length: 0,
+          start: 0,
+          end: 0,
+          page: 0,
+        }
       },
       timers: {
         updateDatabase: {
@@ -169,14 +184,14 @@ export default {
         'info': 'blue',
         'error': 'red',
       },
-      configDetail: {
+      defaultConfigs: {
         projection: {
           showUndefined: { type: 'boolean', default: true, },
-          maxItem: { type: 'number', default: 100, },
-          moreCount: { type: 'number', default: 100 },
-          pageMode: { type: 'boolean', default: false },
-          pageSize: { type: 'number', default: 1 },
         },
+        page: {
+          pageSize: { type: 'number', default: 10 },
+          tablePageSize: { type: 'number', default: 100 },
+        }
       }
     }
   },
@@ -199,8 +214,6 @@ export default {
     defaultProjection () {
       return this.tree.children.map(_ => _.path)
     },
-    allConfigs () {
-    },
   },
   watch: {
     'store.treeState.comments' (value) {
@@ -215,6 +228,7 @@ export default {
     },
   },
   created () {
+    // watch for tab change
     let watcher = (value) => {
       let el
       if (value==='tree') {
@@ -231,6 +245,30 @@ export default {
       }
     }
     this.$watch('store.status.sidebar', watcher)
+    /** TODO
+    * when data or configs or projection changed(outside)
+      update store
+    * when store.tree, store.projectionFields, store.filters change(inside)
+      update database and the print
+    */
+    let dataChange = (newValue, oldValue) => {
+      console.log('data changed!')
+    }
+    let structChange = (newValue, oldValue) => {
+      console.log('struct changed!')
+      this.analyser = new JsonAnalyser({tree: value})
+    }
+    let filtersChange = (newValue, oldValue) => {
+      this.store.filters = newValue
+    }
+    let configsChange = (newValue, oldValue) => {
+      console.log('configs changed!')
+    }
+    this.$watch('data', dataChange)
+    this.$watch('struct',  structChange)
+    this.$watch('filters', filtersChange)
+    this.$watch('configs', configsChange)
+
     this.$watch('store.projectionFields', this.onProjectionChange)
 
     this.init()
@@ -241,15 +279,15 @@ export default {
     async init () {
       try {
         await this.initDatabase()
-        this.onFilterChange()
-      } catch (e) {
+        this.onFilterChange(null, null, true)
+      } catch (error) {
         console.error(error)
         this.loading = false
-        this.initTree()
+        this.initStore()
       }
     },
     // about database and init
-    async saveState (key, tx) {
+    async saveStore (key, tx) {
       let keys
       if (key) {
         keys = [key]
@@ -261,11 +299,25 @@ export default {
         await tx.objectStore(key).put(this.store[key], this.uid)
       }
     },
+    getConfigs (config) {
+      let result = {}
+      for (let key of Object.keys(this.defaultConfigs)) {
+        result[key] = {}
+        for (let subkey of Object.keys(this.defaultConfigs[key])) {
+          result[key][subkey] = this.defaultConfigs[key][subkey].default
+        }
+      }
+      if (!config) return result
+      for (let key of Object.keys(config)) {
+        Object.assign(result[key], config[key])
+      }
+      return result
+    },
     async initDatabase (initial = {}) {
       if (!window.indexedDB) {
         throw Error('no support for indexedDB')
       } else {
-        let keys = Object.keys(this.store)
+        let keys = Object.keys(this.store) // get all keys from default
         let db = await openDB('ac-table', 1, {
           upgrade (db, oldVersion, newVersion, transaction) {
             //db.createObjectStore('trees', { keyPath: 'uid' })
@@ -277,18 +329,21 @@ export default {
         })
         let tx = db.transaction(['uids', ...keys], 'readwrite')
         let uidsStore = tx.objectStore('uids')
-        let data = await uidsStore.get(this.uid)
-        if (!data) { // gen new tree
-          this.statusBarInfo(`gen new tree`, 'info')
-          this.initTree()
-          await this.saveState(null, tx)
+        let data, uid
+        uid = await uidsStore.get(this.uid)
+        if (!uid) { // init the store
+          // tree, treeState, extraFields, projectionFields, configs, status
+          this.statusBarInfo(`gen new store`, 'info')
+          this.initStore()
+          await this.saveStore(null, tx)
         } else {
-          this.statusBarInfo(`use old tree`, 'info')
+          this.statusBarInfo(`use old store`, 'info')
           data = {}
           for (let key of keys) {
             data[key] = await tx.objectStore(key).get(this.uid)
           }
-          this.initTree(data)
+          this.analyser = new JsonAnalyser({tree: data.tree})
+          Object.assign(this.store, data)
         }
         // clean old trees
         let uids = await uidsStore.getAllKeys('uids')
@@ -306,7 +361,7 @@ export default {
         this.store.treeState.comments = null
       }
     },
-    updateDatabase (fields) {
+    updateDatabase (fields, sync) {
       let keys = Object.keys(this.store)
       let timer = ['uids', ...keys]
       if (fields) timer = fields
@@ -315,7 +370,7 @@ export default {
         this.timers.updateDatabase[field] = setTimeout(async () => {
           let db = this.db
           let tx = db.transaction(field, 'readwrite')
-          await this.saveState(field, tx)
+          await this.saveStore(field, tx)
           await tx.done
           //this.statusBarInfo(`save ${field}`, 'info')
           console.log(`save ${field}`)
@@ -350,16 +405,38 @@ export default {
       await tx.done
       console.log('clean all database')
     },
-    initTree (data) {
-      if (data) {
-        this.analyser = new JsonAnalyser({tree:data.tree})
-        Object.assign(this.store, data)
+    initStore () {
+      this.setStoreTree()
+      this.setStoreConfigs()
+      this.setStoreFilters()
+    },
+    setStoreFilters (filters) {
+      if (filters) {
+        this.store.filters = filters
       } else {
-        this.analyser = new JsonAnalyser()
-        this.genTree(this.data)
+        this.store.filters = this.filters
+      }
+    },
+    setStoreConfigs (configs) {
+      if (configs) {
+        this.store.configs = configs
+      } else {
+        this.store.configs = this.getConfigs(this.configs)
+      }
+    },
+    setStoreTree (tree) {
+      if (tree) {
+        this.analyser = new JsonAnalyser({tree})
+        this.store.tree = tree
+      } else if (this.struct) {
+        this.analyser = new JsonAnalyser({tree: this.struct})
+        this.store.tree = this.struct
+      } else {
+        this.store.tree = this.genTree(this.data)
       }
     },
     genTree (data) {
+      this.analyser = new JsonAnalyser()
       let {structTree, tree} = this.analyser.analysis(data)
       this.goThrough(tree, _ => {
         if (_.type==='object'||_.type==='array') {
@@ -381,34 +458,52 @@ export default {
         this.addProjection(_)
       })
       tree.status.open = true
-      this.store.tree = tree
+      return tree
     },
-    // sidebar
-    sidebarKeydown (event) {
-      if (event.shiftKey) {
-        switch (event.key) {
-          case 'Tab':
-            event.preventDefault()
-            event.stopPropagation()
+    // keyboard
+    keydown (event) {
+      switch (event.key) {
+        case 'PageUp':
+          event.preventDefault()
+          event.stopPropagation()
+          this.switchPage(-1)
+          break
+        case 'PageDown':
+          event.preventDefault()
+          event.stopPropagation()
+          this.switchPage(1)
+          break
+        case 'Tab':
+          event.preventDefault()
+          event.stopPropagation()
+          if (event.shiftKey) {
             this.switchTab(-1)
-            break
-        }
-      } else {
-        switch (event.key) {
-          case 'Tab':
-            event.preventDefault()
-            event.stopPropagation()
+          } else {
             this.switchTab(1)
-            break
-        }
+          }
+          break
       }
     },
     switchTab (value) {
       let tabs = ['tree', 'projection', 'extra']
       let cIndex = tabs.findIndex(_ => _===this.store.status.sidebar)
       let nIndex = (cIndex + tabs.length + value) % tabs.length
-      console.log(nIndex, value)
       this.store.status.sidebar = tabs[nIndex]
+      this.updateDatabase(['status'])
+    },
+    switchPage (value) {
+      console.log(this.status)
+      let {page, maxPage} = this.status.page
+      page = page + value
+      if (page<=0) {
+        page = 0
+      } else if (page >= maxPage - 1) {
+        page = maxPage - 1
+      }
+      console.log('change page to ', page)
+      this.onPageChange(page)
+      this.store.status.page = page
+      this.updateDatabase(['status'])
     },
     // about show
     addProjection (tree, extra) {
@@ -489,7 +584,7 @@ export default {
         }
       }
     },
-    changeSidebar (event) {
+    clickChangeSidebar (event) {
       let target = event.target
       this.store.status.sidebar = target.getAttribute('name')
       this.updateDatabase(['status'])
@@ -530,9 +625,53 @@ export default {
       }
     },
     // about filter and projection
-    onFilterChange (newValue, oldValue) {
-      this.filteredData = this.data
-      this.onProjectionChange(this.store.projectionFields, this.store.projectionFields)
+    onConfigChange (newValue, oldValue) {
+      this.onFilterChange(this.store.filters)
+    },
+    onDataChange (newValue, oldValue) {
+      this.onFilterChange(this.store.filters)
+    },
+    onFilterChange (newValue, oldValue, init) {
+      let filteredData = this.data
+      this.filteredData = filteredData
+      if (!init) {
+        this.store.status.page = 0
+        this.updateDatabase(['status'])
+      }
+      this.onProjectionChange(this.store.projectionFields)
+    },
+    onProjectionChange (newProjects, oldProjects) {
+      console.log({newProjects, oldProjects})
+      // can optimize here
+      if (!oldProjects||newProjects.length!==oldProjects.length) {
+        this.projectedData = {}
+        for (let projection of this.store.projectionFields) {
+          if (!projection.extra) { // normal fields
+            this.projectedData[projection.path] = this.analyser.getValueByPath(this.filteredData, projection.path)
+          } else { // extra fields
+            this.projectedData[projection.path] = this.data.map(_ => projection.calculate(_))
+          }
+        }
+      }
+      // projectionStrings
+      if (this.store.projectionFields.length===0) { // no fields
+        this.projectedStrings = []
+      } else {
+        let result = this.prettyPrint(this.filteredData, this.store.projectionFields, this.tree)
+        this.projectedStrings = result
+      }
+      this.onPageChange(this.store.status.page)
+    },
+    onPageChange (newValue, oldValue) {
+      let pageSize = this.store.configs.page.pageSize
+      let length = this.projectedStrings.length
+      let maxPage = Math.ceil(length / pageSize)
+      let start = pageSize*newValue
+      let end = pageSize*(newValue+1)
+      this.pageStrings = this.projectedStrings.slice(start, end)
+      this.status.page = {
+        maxPage, length, start, end, page: newValue
+      }
     },
     _prettyPrint (data, tree, level) {
       let type = this.analyser.getType(data)
@@ -646,27 +785,6 @@ export default {
       }
       return result
     },
-    onProjectionChange (newProjects, oldProjects) {
-      console.log({newProjects, oldProjects})
-      // can optimize here
-      if (!oldProjects||newProjects.length!==oldProjects.length) {
-        this.projectedData = {}
-        for (let projection of this.store.projectionFields) {
-          if (!projection.extra) { // normal fields
-            this.projectedData[projection.path] = this.analyser.getValueByPath(this.filteredData, projection.path)
-          } else { // extra fields
-            this.projectedData[projection.path] = this.data.map(_ => projection.calculate(_))
-          }
-        }
-      }
-      // projectionStrings
-      if (this.store.projectionFields.length===0) { // no fields
-        this.projectedStrings = []
-      } else {
-        let result = this.prettyPrint(this.filteredData, this.store.projectionFields, this.tree)
-        this.projectedStrings = result
-      }
-    },
   }
 }
 </script>
@@ -681,7 +799,9 @@ $fontFamily: "'Courier New', Courier, monospace";
   display: flex;
   flex-direction: column;
   min-height: 20em;
-  max-height: 90vh;
+  //max-height: 90vh;
+  max-height: 1000px;
+  outline:none;
 }
 .#{$pre}-toolbar {
   padding: 0 0.5rem;
@@ -786,14 +906,6 @@ $fontFamily: "'Courier New', Courier, monospace";
 
 .#{$pre}-footer span {
   padding: 0px 0.5em;
-}
-.#{$pre}-show-button {
-  position: absolute;
-  right:  1em;
-  top: 1em;
-  width:  3em;
-  height: 3em;
-  background: #bffff9;
 }
 .#{$pre}-status-message {
   position: absolute;

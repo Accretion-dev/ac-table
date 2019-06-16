@@ -19,20 +19,20 @@
     <div :class="`${prefixCls}-header`">
       <span
         :class="`${prefixCls}-toolbar`"
-        :style="{background: status.sidebarShow?'#d8ffd7':'unset'}"
-        @click="status.sidebarShow=!status.sidebarShow"
+        :style="{background: status.showSidebar?'#d8ffd7':'unset'}"
+        @click="status.showSidebar=!status.showSidebar"
       >
-        T
+        <icons name="list" size="1rem" />
       </span>
       <div :class="`${prefixCls}-sidebar-tab`" @click="clickChangeSidebar">
         <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
-          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">tree</span>
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">T</span>
         </span>
         <span name="projection" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='projection'}">
-          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">projection</span>
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">P</span>
         </span>
         <span name="extra" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='extra'}">
-          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">extra</span>
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">E</span>
         </span>
       </div>
       <span @click="cleanCurrentDatabase">
@@ -41,9 +41,42 @@
       <span @click="cleanAllDatabase">
         cleanAll
       </span>
-      <span ref="pageStatus" style="position:absolute; right:0;">
-        <span>{{status.page.page}}({{status.page.start}}~{{status.page.end}})</span>{{"/"}}<span>{{status.page.maxPage}}({{status.page.length}})</span>
+      <span ref="pageStatus" style="position:absolute; right:0; display:flex; align-items:center;">
+        <ac-input
+          v-model="page"
+          type="number"
+          :focus-select-all-text="true"
+          placeholder="page"
+          :validator="validators.number"
+          :reportDelay="200"
+        />
+        <span>({{status.page.start}}~{{status.page.end}})</span>{{"/"}}<span>{{status.page.maxPage}}({{status.page.length}})</span>
+        <span @click="status.showSettings = !status.showSettings;">
+          <icons name="settings" size="1rem" />
+        </span>
       </span>
+    </div>
+    <div style="position: relative;" v-if="status.showSettings">
+      <div :class="`${prefixCls}-settings`" >
+        <div v-for="key of Object.keys(store.configs)" :key="key">
+          <span>{{key}}:</span>
+          <div
+            v-for="subkey of Object.keys(store.configs[key])"
+            :key="subkey"
+            style="padding-left: 1rem; display:flex; align-items: center;"
+          >
+            <span>{{subkey}}:</span>
+            <ac-input
+              v-model="store.configs[key][subkey]"
+              :type="defaultConfigs[key][subkey].type"
+              :focus-select-all-text="true"
+              :placeholder="defaultConfigs[key][subkey].type"
+              :validator="validators[defaultConfigs[key][subkey].type]"
+              :reportDelay="200"
+            />
+          </div>
+        </div>
+      </div>
     </div>
     <div :class="`${prefixCls}-main`">
       <template v-if="loading">
@@ -52,7 +85,7 @@
         </div>
       </template>
       <template v-else>
-        <div v-show="status.sidebarShow" ref="sidebar-wrapper" :class="`${prefixCls}-sidebar-wrapper`">
+        <div v-show="status.showSidebar" ref="sidebar-wrapper" :class="`${prefixCls}-sidebar-wrapper`">
           <div ref="sidebar" :class="`${prefixCls}-sidebar`">
             <ac-tree
               v-show="store.status.sidebar==='tree'"
@@ -71,7 +104,7 @@
             </div>
           </div>
         </div>
-        <div v-show="status.sidebarShow"
+        <div v-show="status.showSidebar"
              ref="resizer"
              :class="{[`${prefixCls}-resizer`]: true, [`${prefixCls}-resizer-selected`]:status.resizing}"
              :style="{'z-index': masker?999:'unset'}"
@@ -80,7 +113,10 @@
         </div>
         <div :class="`${prefixCls}-content`">
           <div v-for="(pdata,index) in pageStrings" :key="index" :class="`${prefixCls}-print-line`">
-            <span :class="`${prefixCls}-print-index`" :style="{width: `${digital}em`}">{{ index+status.page.start }}</span>
+            <span
+              :class="`${prefixCls}-print-index`"
+              :style="{width:`${digital}rem`,'flex-shrink':0}"
+            >{{ index+status.page.start }}</span>
             <pre :class="`${prefixCls}-print-data`">{{ pdata }}</pre>
           </div>
         </div>
@@ -122,7 +158,7 @@ TODO:
 
 export default {
   name: 'ac-table',
-  components: {acTree, acTreeProjection},
+  components: {acTree, acTreeProjection, icons},
   props: {
     data: { type: Array, default () { return [] } },
     configs: { type: Object, default: null },
@@ -158,7 +194,8 @@ export default {
         },
       },
       status: {
-        sidebarShow: true,
+        showSidebar: true,
+        showSettings: false,
         resizing: false,
         page: {
           maxPage: 0,
@@ -192,12 +229,24 @@ export default {
           pageSize: { type: 'number', default: 10 },
           tablePageSize: { type: 'number', default: 100 },
         }
+      },
+      validators: {
+        boolean: value => {
+          if (value !== 'true' && value !== 'false') {
+            return 'should be true or false'
+          }
+        },
+        number: value => {
+          if (!(value&&!isNaN(Number(value))&&Number(value)>0)) {
+            return 'should be a >0 number'
+          }
+        },
       }
     }
   },
   computed: {
     digital () {
-      let N = this.projectedStrings.length
+      let N = this.data.length
       let count = 1
       while(N>=1) {
         N = N/10
@@ -214,6 +263,14 @@ export default {
     defaultProjection () {
       return this.tree.children.map(_ => _.path)
     },
+    page: {
+      get () {
+        return this.status.page.page
+      },
+      set (value) {
+        this.switchPage(value, true)
+      }
+    }
   },
   watch: {
     'store.treeState.comments' (value) {
@@ -247,14 +304,13 @@ export default {
       this.store.filters = newValue
     }
     let configsChange = (newValue, oldValue) => {
-      console.log('configs changed!')
+      this.store.configs = newValue
     }
     this.$watch('data', dataChange)
     this.$watch('struct',  structChange)
     this.$watch('filters', filtersChange)
-    this.$watch('configs', configsChange)
-
-    this.$watch('store.projectionFields', this.onProjectionChange)
+    this.$watch('configs', configsChange, {deep: true})
+    this.$watch('store.configs', this.onConfigChange, {deep: true})
 
     this.init()
   },
@@ -452,8 +508,8 @@ export default {
         case 'Escape':
           event.preventDefault()
           event.stopPropagation()
-          this.status.sidebarShow=!this.status.sidebarShow
-          if (this.status.sidebarShow) {
+          this.status.showSidebar=!this.status.showSidebar
+          if (this.status.showSidebar) {
             this.focusOnSicebar(this.store.status.sidebar)
           } else {
             this.$el.focus()
@@ -487,14 +543,17 @@ export default {
       this.store.status.sidebar = tabs[nIndex]
       this.updateDatabase(['status'])
     },
-    switchPage (value) {
-      console.log(this.status)
+    switchPage (value, set) {
       let {page, maxPage} = this.status.page
-      page = page + value
+      if (set) {
+        page = value
+      } else {
+        page = page + value
+      }
       if (page<=0) {
         page = 0
-      } else if (page >= maxPage - 1) {
-        page = maxPage - 1
+      } else if (page >= maxPage) {
+        page = maxPage
       }
       if (this.store.status.page !== page) {
         this.onPageChange(page)
@@ -638,6 +697,7 @@ export default {
     },
     // about filter and projection
     onConfigChange (newValue, oldValue) {
+      this.updateDatabase(['configs'])
       this.onFilterChange(this.store.filters)
     },
     onDataChange (newValue, oldValue) {
@@ -677,10 +737,11 @@ export default {
     onPageChange (newValue, oldValue) {
       let pageSize = this.store.configs.page.pageSize
       let length = this.projectedStrings.length
-      let maxPage = Math.ceil(length / pageSize)
+      let maxPage = Math.floor(length / pageSize)
       let start = pageSize*newValue
-      let end = pageSize*(newValue+1)
-      this.pageStrings = this.projectedStrings.slice(start, end)
+      let end = pageSize*(newValue+1)-1
+      end = end>=length-1?length-1:end
+      this.pageStrings = this.projectedStrings.slice(start, end+1)
       this.status.page = {
         maxPage, length, start, end, page: newValue
       }
@@ -815,8 +876,17 @@ $fontFamily: "'Courier New', Courier, monospace";
   max-height: 1000px;
   outline:none;
 }
+.#{$pre}-settings {
+  position: absolute;
+  right: 0;
+  padding-right: 1rem;
+  background: #d8ffd7;
+  z-index: 99;
+}
 .#{$pre}-toolbar {
   padding: 0 0.5rem;
+  align-items: center;
+  display: flex;
 }
 .#{$pre}-masker {
   position: absolute;
@@ -825,10 +895,10 @@ $fontFamily: "'Courier New', Courier, monospace";
 }
 .#{$pre}-header {
   height: 2em;
-  background: #ffeb3c;
+  background: #fff8b7;
   display: flex;
   //justify-content: center;
-  align-items: center;
+  align-items: stretch;
 }
 .#{$pre}-main {
   display: flex;
@@ -845,6 +915,8 @@ $fontFamily: "'Courier New', Courier, monospace";
   position: fixed;
   padding: 0;
   margin: 0;
+  background: #d8ffd7;
+  z-index: 99;
 }
 .#{$pre}-sidebar {
   flex: 1;
@@ -881,6 +953,7 @@ $fontFamily: "'Courier New', Courier, monospace";
 .#{$pre}-sidebar-tab span{
   flex: 1;
   text-align: center;
+
 }
 .#{$pre}-sidebar-tab span:hover{
   background: #d8ffd7;

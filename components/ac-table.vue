@@ -550,10 +550,12 @@ export default {
       //let status = obj.status
       //tree.updateNewline(status)
       let project = this.store.projectionFields.find(_ => _.path===obj.path)
-      let noFirstNewline = obj.status.noFirstNewline
-      let noNewline = obj.status.noNewline
-      project.status.noFirstNewline = noFirstNewline
-      project.status.noNewline = noNewline
+      if (project) {
+        let noFirstNewline = obj.status.noFirstNewline
+        let noNewline = obj.status.noNewline
+        project.status.noFirstNewline = noFirstNewline
+        project.status.noNewline = noNewline
+      }
       this.onProjectionChange(this.store.projectionFields, this.store.projectionFields)
     },
     // others
@@ -572,9 +574,7 @@ export default {
         this.updateDatabase(['tree', 'projectionFields'])
       } else if (change&&change.status&&change.status.newline) { // update newline
         this.updateDatabase(['tree'])
-        if (value.status.projection) { // update projection here
-          this.updateProjectionStatus(origin.tree)
-        }
+        this.updateProjectionStatus(origin.tree)
       } else { // update selected
         this.updateDatabase(['tree', 'treeState'])
       }

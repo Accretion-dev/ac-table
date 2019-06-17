@@ -103,10 +103,12 @@ export default {
         }
       } else {
         switch (event.key) {
+          case 'k':
           case 'ArrowUp':
             event.preventDefault()
             this.changeSelect(-1)
             break
+          case 'j':
           case 'ArrowDown':
             event.preventDefault()
             this.changeSelect(1)
@@ -114,6 +116,13 @@ export default {
           case 's':
             event.preventDefault()
             this.changeShow(this.projectionState.selected)
+            break
+          case '-':
+            event.preventDefault()
+            let children = this.$children.find(_ => _.$vnode.data.key===this.projectionState.selected)
+            if (children) {
+              this.$emit('update', {deleteProjection: children.data})
+            }
             break
         }
       }

@@ -235,6 +235,7 @@ export default {
       defaultConfigs: {
         projection: {
           showUndefined: { type: 'boolean', default: true, },
+          debounceDelay: { type: 'number', default: 500, },
         },
         page: {
           pageSize: { type: 'positive', default: 10 },
@@ -644,7 +645,7 @@ export default {
       clearTimeout(this.timers.onProjectionChange)
       this.timers.onProjectionChange = setTimeout(() => {
         this.onProjectionChange(this.store.projectionFields, this.store.projectionFields)
-      }, 200)
+      }, this.store.configs.projection.debounceDelay)
     },
     // others
     onTreeUpdate (change, value, origin) {
@@ -674,14 +675,24 @@ export default {
         this.store.treeState.comments = {y:selected.$el.getBoundingClientRect().y, comments: selected.comments}
         this.timers.treeComments = setTimeout(() => {
           this.store.treeState.comments = null
-        }, 1000)
+        }, this.store.configs.projection.debounceDelay)
       }
     },
     onProjectionUpdate (change) {
       this.updateDatabase(['projectionState'])
       if (change.changeShow) {
         this.updateDatabase(['projectionFields'])
-        this.onProjectionChange(this.store.projectionFields, this.store.projectionFields)
+        clearTimeout(this.timers.onProjectionChange)
+        this.timers.onProjectionChange = setTimeout(() => {
+          this.onProjectionChange(this.store.projectionFields, this.store.projectionFields)
+        }, 500)
+      }
+      if (change.deleteProjection) {
+        this.removeProjection(change.deleteProjection)
+        clearTimeout(this.timers.onProjectionChange)
+        this.timers.onProjectionChange = setTimeout(() => {
+          this.onProjectionChange(this.store.projectionFields, this.store.projectionFields)
+        }, 500)
       }
     },
     goThrough(root, func) {

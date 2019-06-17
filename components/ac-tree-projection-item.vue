@@ -1,5 +1,10 @@
 <template>
-  <div :class="`${prefixCls}`">
+  <div :class="{
+    [`${prefixCls}`]: true,
+    [`${prefixCls}-not-show`]: !this.data.status.show,
+    [`${this.prefixCls}-selected`]: selected}"
+    @click="click"
+  >
     <span v-if="icon">
       <icons :name="data.extra?'B_E':'blank'" size="0.9em"/>
       <span v-if="icon.array">
@@ -35,12 +40,14 @@ export default {
   name: 'ac-tree-projection-item',
   components: {icons},
   props: {
-    data: {type: Object, required: true}
+    data: {type: Object, required: true},
+    projectionState: {type: Object, required: true},
   },
   data () {
     return {
       prefixCls,
       typeMap,
+      selected: false,
     }
   },
   watch:{
@@ -66,6 +73,15 @@ export default {
   mounted () {
   },
   methods: {
+    click (event) {
+      this.$emit('update', {changeSelect: this.data})
+    },
+    changeSelect (status) {
+      this.selected = status
+    },
+    changeShow () {
+      this.data.status.show = !this.data.status.show
+    },
   }
 }
 </script>
@@ -77,5 +93,8 @@ $pre: ac-tree-projection-item;
 }
 .#{$pre}-selected {
   background: #d8ffd775;
+}
+.#{$pre}-not-show {
+  color: gainsboro;
 }
 </style>

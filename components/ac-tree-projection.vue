@@ -1,8 +1,14 @@
 <template>
-  <div :class="`${prefixCls}`" tabindex="0">
+  <div
+    :class="`${prefixCls}`"
+    tabindex="0"
+    @keydown="keydown"
+  >
     <ac-tree-projection-item v-for="data of projections"
-      :key="`${data.extra?'e__':'f__'}${data.path}`"
+      :key="getKey(data)"
       :data="data"
+      :projectionState="projectionState"
+      @update="onupdate"
     />
   </div>
 </template>
@@ -15,7 +21,8 @@ export default {
   name: 'ac-tree-projection',
   components: {acTreeProjectionItem},
   props: {
-    projections: {type: Array, required: true}
+    projections: {type: Array, required: true},
+    projectionState: {type: Object, required: true},
   },
   data () {
     return {
@@ -29,8 +36,88 @@ export default {
   created() {
   },
   mounted () {
+    let selected = this.projectionState.selected
+    this.setSelected(selected, true)
   },
   methods: {
+    getKey (data) {
+      return `${data.extra?'e__':'f__'}${data.path}`
+    },
+    changeShow (key) {
+      let children = this.$children.find(_ => _.$vnode.data.key===key)
+      if (children) {
+        children.changeShow()
+      }
+      this.$emit('update', {changeShow: true})
+    },
+    setSelected (key, status) {
+      let children = this.$children.find(_ => _.$vnode.data.key===key)
+      if (children) {
+        children.changeSelect(status)
+      }
+    },
+    changeSelect (status) {
+      if (!this.projections.length) return
+      if (!status) {
+        if (this.projectionState.selected) {
+          this.setSelected(this.projectionState.selected, true)
+        }
+      } else {
+        if (!this.projectionState.selected) {
+          this.projectionState.selected = this.getKey(this.projections[0])
+          this.setSelected(this.projectionState.selected, true)
+          this.$emit('update', {changeSelect: true})
+        } else {
+          this.setSelected(this.projectionState.selected, false)
+          let index = this.projections.findIndex(_ => this.getKey(_)===this.projectionState.selected)
+          if (index === -1) {
+            index = 0
+          } else {
+            index = (index + status + this.projections.length)%this.projections.length
+          }
+          let key = this.getKey(this.projections[index])
+          this.projectionState.selected = key
+          this.setSelected(this.projectionState.selected, true)
+          this.$emit('update', {changeSelect: true})
+        }
+      }
+    },
+    onupdate (change) {
+      if (change.changeSelect) {
+        if (this.projectionState.selected) {
+          this.setSelected(this.projectionState.selected, false)
+        }
+        this.projectionState.selected = this.getKey(change.changeSelect)
+        this.changeSelect(0)
+      }
+    },
+    keydown (event) {
+      if (event.shiftKey) {
+        switch (event.key) {
+          case 'ArrowUp':
+            event.preventDefault()
+            break
+          case 'ArrowDown':
+            event.preventDefault()
+            break
+        }
+      } else {
+        switch (event.key) {
+          case 'ArrowUp':
+            event.preventDefault()
+            this.changeSelect(-1)
+            break
+          case 'ArrowDown':
+            event.preventDefault()
+            this.changeSelect(1)
+            break
+          case 's':
+            event.preventDefault()
+            this.changeShow(this.projectionState.selected)
+            break
+        }
+      }
+    },
   }
 }
 </script>
@@ -39,5 +126,6 @@ export default {
 $pre: ac-tree-projection;
 .#{$pre} {
   outline:none;
+  flex: 1;
 }
 </style>

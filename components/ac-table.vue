@@ -103,6 +103,8 @@
               v-show="store.status.sidebar==='projection'"
               ref="projection"
               :projections="store.projectionFields"
+              :projectionState="store.projectionState"
+              @update="onProjectionUpdate"
             />
             <div v-show="store.status.sidebar==='extra'" ref="extra" tabindex="0">
               extra terms
@@ -187,6 +189,9 @@ export default {
         treeState: {
           selected: null,
           comments: null,
+        },
+        projectionState: {
+          selected: null,
         },
         extraFields: [],
         projectionFields:[],
@@ -378,6 +383,7 @@ export default {
             }
           }
         })
+        this.db = db
         let tx = db.transaction(['uids', ...keys], 'readwrite')
         let uidsStore = tx.objectStore('uids')
         let data, uid
@@ -407,15 +413,14 @@ export default {
             await this.stores.delete(each)
           }
         }
-        this.db = db
         this.loading = false
         this.store.treeState.comments = null
       }
     },
     updateDatabase (fields, sync) {
       let keys = Object.keys(this.store)
-      let timer = ['uids', ...keys]
-      if (fields) timer = fields
+      let all = ['uids', ...keys]
+      if (!fields) fields = all
       for (let field of fields) {
         clearTimeout(this.timers.updateDatabase[field])
         this.timers.updateDatabase[field] = setTimeout(async () => {
@@ -513,7 +518,7 @@ export default {
     },
     // keyboard
     keydown (event) {
-      console.log(event)
+      console.log('keydown in ac-table:', event)
       switch (event.key) {
         case 'Escape':
           event.preventDefault()
@@ -655,6 +660,13 @@ export default {
         this.timers.treeComments = setTimeout(() => {
           this.store.treeState.comments = null
         }, 1000)
+      }
+    },
+    onProjectionUpdate (change) {
+      this.updateDatabase(['projectionState'])
+      if (change.changeShow) {
+        this.updateDatabase(['projectionFields'])
+        this.onProjectionChange(this.store.projectionFields, this.store.projectionFields)
       }
     },
     goThrough(root, func) {
@@ -855,6 +867,7 @@ export default {
         }
         for (let index=0; index<plen; index++) {
           projection = this.store.projectionFields[index]
+          if (!projection.status.show) continue
           let thisresult
           if (!projection.extra) { // normal fields
               let thistree = this.analyser.getTypeByPath(projection.path)
@@ -973,7 +986,6 @@ $fontFamily: "'Courier New', Courier, monospace";
 .#{$pre}-sidebar-tab span{
   flex: 1;
   text-align: center;
-
 }
 .#{$pre}-sidebar-tab span:hover{
   background: #d8ffd7;

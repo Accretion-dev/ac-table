@@ -66,15 +66,19 @@
             style="padding-left: 1rem; display:flex; align-items: center;"
           >
             <span>{{subkey}}:</span>
-            <ac-input
-              v-model="store.configs[key][subkey]"
-              :type="defaultConfigs[key][subkey].type"
-              :data="defaultConfigs[key][subkey].type==='boolean'?['true','false']:[]"
-              :focus-select-all-text="true"
-              :placeholder="defaultConfigs[key][subkey].type"
-              :validator="validators[defaultConfigs[key][subkey].type]"
-              :reportDelay="200"
-            />
+            <template v-if="defaultConfigs[key][subkey].type==='boolean'">
+              <input type="checkbox" v-model="store.configs[key][subkey]" />
+            </template>
+            <template v-else>
+              <ac-input
+                v-model="store.configs[key][subkey]"
+                :type="defaultConfigs[key][subkey].type"
+                :focus-select-all-text="true"
+                :placeholder="defaultConfigs[key][subkey].type"
+                :validator="validators[defaultConfigs[key][subkey].type]"
+                :reportDelay="200"
+              />
+            </template>
           </div>
         </div>
       </div>
@@ -758,13 +762,13 @@ export default {
       let prefix1 = [...Array(2*(level+1)).keys()].map(_ => ' ').join('')
       let term, thistree, thisdata
       if (!(tree)) {
-        return String(data)+',\n'+prefix0
+        return JSON.stringify(data)+',\n'+prefix0
       }
       if (tree.type==='mixed') {
         tree = tree.children.find(_ => _.type === type)
       }
       if (!(tree)) {
-        return String(data)+',\n'+prefix0
+        return JSON.stringify(data)+',\n'+prefix0
       }
       if (type === 'object') {
         let keys = Object.keys(data)
@@ -777,13 +781,15 @@ export default {
           thistree = tree.children.find(_ => _.name === key)
           let thisresult
           if (!thistree) {
-            thisresult = String(data)
+            thisresult = JSON.stringify(data)
           } else {
             name = thistree.name
             thisdata = data[name]
             thisresult = this._prettyPrint(thisdata, thistree, level+1)
           }
-          term.push(`${name}: ${thisresult}`)
+          if (this.store.configs.projection.showUndefined || thisresult !== undefined) {
+            term.push(`${name}: ${thisresult}`)
+          }
         }
         if (term.length)  term[term.length-1] = term[term.length-1].slice(0,-2)
         term.push('},\n'+prefix0)
@@ -793,7 +799,7 @@ export default {
         if (!tree.status.noFirstNewline) {
           term = ['[\n'+prefix1]
         } else {
-          term = ['[ ']
+          term = ['[']
         }
         for (let eachdata of data) {
           let thisresult
@@ -802,7 +808,9 @@ export default {
           } else {
             thisresult = this._prettyPrint(eachdata, tree, level+1)
           }
-          term.push(thisresult)
+          if (this.store.configs.projection.showUndefined || thisresult !== undefined) {
+            term.push(thisresult)
+          }
         }
         if (term.length !== 1) {
           term[term.length-1] = term[term.length-1].slice(0,-2)
@@ -821,12 +829,16 @@ export default {
         if (tree.formatter) {
           result = tree.formatter(data)
         } else {
-          result = String(data)
+          result = JSON.stringify(data)
         }
-        if (!tree.status.noNewline) {
-          return `${result},\n${prefix0}`
+        if (this.store.configs.projection.showUndefined || result !== undefined) {
+          if (!tree.status.noNewline) {
+            return `${result},\n${prefix0}`
+          } else {
+            return `${result}, `
+          }
         } else {
-          return `${result}, `
+          return undefined
         }
       }
     },
@@ -855,7 +867,9 @@ export default {
               thisresult = projection.calculate(eachdata)
             }
           }
-          term.push(`${projection.path}: ${thisresult}`)
+          if (this.store.configs.projection.showUndefined || thisresult !== undefined) {
+            term.push(`${projection.path}: ${thisresult}`)
+          }
         }
         if (term.length) term[term.length-1] = term[term.length-1].slice(0,-2)
         term.push('},\n')

@@ -4,9 +4,10 @@
     tabindex="0"
     @keydown="keydown"
   >
-    <ac-tree-projection-item v-for="data of projections"
+    <ac-tree-projection-item v-for="(data, index) of projections"
       :key="getKey(data)"
       :data="data"
+      :index="index"
       :projectionState="projectionState"
       @update="onupdate"
     />
@@ -104,6 +105,12 @@ export default {
         }
         this.projectionState.selected = this.getKey(change.changeSelect)
         this.changeSelect(0)
+      }
+      if (change.reorder) {
+        let {start,end} = change.reorder
+        let [deleted] = this.projections.splice(start,1)
+        this.projections.splice(end,0,deleted)
+        this.$emit('update', {reorder: true})
       }
     },
     keydown (event) {

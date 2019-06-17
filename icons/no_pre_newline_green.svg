@@ -1,0 +1,16 @@
+<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
+ <g display="inline">
+  <title>Layer 1</title>
+  <g stroke="null" id="layer1">
+   <path stroke="null" d="m12.73921,5.93108l0,-4.23516l-2.06383,0l0,4.23516c0,0.52943 -0.51596,1.05883 -1.03192,1.05883l-5.15959,0l3.09576,-3.17639l-1.03191,-1.05882l-5.15959,5.29398l5.15959,5.29399l1.03191,-1.05882l-3.09576,-3.17639l5.15959,0c1.80585,0 3.09576,-1.3235 3.09576,-3.17639z" id="path4483" stroke-width="0.70556px" fill-rule="evenodd" fill="#00FF00"/>
+  </g>
+  <rect stroke="null" id="svg_3" height="16.00712" width="2.9283" y="-0.00991" x="13.03723" stroke-width="5" fill="#00FF00"/>
+ </g>
+ <g>
+  <title>Layer 2</title>
+  <g stroke="null" id="svg_1" transform="rotate(41.51266860961914 6.529654026031495,8.125336647033691) ">
+   <path stroke="#00FF00" fill="#00FF00" d="m6.52965,3.02535c2.80499,0 5.1,2.29499 5.1,5.1s-2.29499,5.1 -5.1,5.1s-5.1,-2.29499 -5.1,-5.1s2.29499,-5.1 5.1,-5.1m0,-1.275c-3.50625,0 -6.37499,2.86875 -6.37499,6.37499c0,3.50625 2.86875,6.37499 6.37499,6.37499s6.37499,-2.86875 6.37499,-6.37499c0,-3.50625 -2.86875,-6.37499 -6.37499,-6.37499l0,0z" id="svg_2"/>
+  </g>
+  <rect stroke="#00FF00" fill="none" stroke-width="0.6" stroke-dasharray="null" stroke-linejoin="null" stroke-linecap="null" x="1.17811" y="8.09863" width="10.72806" height="0.15033" id="svg_7" transform="rotate(41.51266860961914 6.542138099670408,8.173791885375977) "/>
+ </g>
+</svg>

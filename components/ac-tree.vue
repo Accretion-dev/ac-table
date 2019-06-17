@@ -89,6 +89,10 @@ export default {
               event.preventDefault();
               this.onChangeAllFold(false, node);
               break
+            case 'N':
+              event.preventDefault();
+              if (node) node.updateProNewline()
+              break
           }
         }
       } else {

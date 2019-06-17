@@ -453,7 +453,7 @@ export default {
       let tx = db.transaction(['uids',...keys], 'readwrite')
       let uidsStore = tx.objectStore('uids')
       let uids = await uidsStore.getAllKeys()
-      for (let key of Object.keys(this.stores)) {
+      for (let key of keys) {
         for (let uid of uids) {
           await tx.objectStore(key).delete(uid)
         }
@@ -501,12 +501,16 @@ export default {
             projection:false,
             noNewline: false,
             noFirstNewline: false,
+            noProNewline: false,
+            noProFirstNewline: false,
           })
         } else {
           this.$set(_,'status',{
             open:false,
             projection:false,
             noNewline: false,
+            noProNewline: false,
+            noProFirstNewline: false,
           })
         }
       })
@@ -604,6 +608,8 @@ export default {
           show: true,
           noNewline: tree.status&&tree.status.noNewline,
           noFirstNewline: tree.status&&tree.status.noFirstNewline,
+          noProNewline: tree.status&&tree.status.noProNewline,
+          noProFirstNewline: tree.status&&tree.status.noProFirstNewline,
         },
       }
       this.store.projectionFields.push(toAdd)
@@ -627,8 +633,12 @@ export default {
       if (project) {
         let noFirstNewline = obj.status.noFirstNewline
         let noNewline = obj.status.noNewline
+        let noProFirstNewline = obj.status.noProFirstNewline
+        let noProNewline = obj.status.noProNewline
         project.status.noFirstNewline = noFirstNewline
         project.status.noNewline = noNewline
+        project.status.noProFirstNewline = noProFirstNewline
+        project.status.noProNewline = noProNewline
       }
       this.onProjectionChange(this.store.projectionFields, this.store.projectionFields)
     },
@@ -649,6 +659,7 @@ export default {
         this.updateProjectionStatus(origin.tree)
       } else if (change&&change.status&&change.status.newline) { // update newline
         this.updateDatabase(['tree'])
+        console.log('updateProjectionStatus:', origin.tree)
         this.updateProjectionStatus(origin.tree)
       } else { // update selected
         this.updateDatabase(['tree', 'treeState'])
@@ -884,7 +895,22 @@ export default {
           if (!projection.extra) { // normal fields
             let thistree = this.analyser.getTypeByPath(projection.path)
             let thisdata = this.analyser.getValueByPath(eachdata, projection.path)
-            thisresult = this._prettyPrint(thisdata, thistree, 1)
+            let thattree
+            if (projection.path.includes('>')) {
+              thattree = {
+                name: thistree.name,
+                path: thistree.path,
+                type: 'array',
+                children: [thistree],
+                status: {
+                  noFirstNewline: thistree.status.noProFirstNewline,
+                  noNewline: thistree.status.noProNewline,
+                }
+              }
+            } else {
+              thattree = thistree
+            }
+            thisresult = this._prettyPrint(thisdata, thattree, 1)
           } else { // extra fields
             if (projection.formatter) {
               thisresult = projection.formatter(projection.calculate(eachdata))

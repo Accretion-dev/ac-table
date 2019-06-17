@@ -41,6 +41,8 @@
             <span style="padding-left:0.1rem; padding-right:0.3rem;"> {{ tree.name }} </span>
             <icons :style="{visibility: tree.status.noFirstNewline?'visible':'hidden'}" name="no_pre_newline" size="0.9rem" />
             <icons :style="{visibility: tree.status.noNewline?'visible':'hidden'}" name="no_newline" size="0.9rem" />
+            <icons :style="{visibility: tree.status.noProFirstNewline?'visible':'hidden'}" name="no_pre_newline_green" size="0.9rem" />
+            <icons :style="{visibility: tree.status.noProNewline?'visible':'hidden'}" name="no_newline_green" size="0.9rem" />
           </span>
         </span>
       </div>
@@ -88,6 +90,8 @@
             <span style="padding-left:0.1rem; padding-right:0.3rem;"> {{ tree.name }} </span>
             <icons :style="{visibility: tree.status.noFirstNewline?'visible':'hidden'}" name="no_pre_newline" size="0.9rem" />
             <icons :style="{visibility: tree.status.noNewline?'visible':'hidden'}" name="no_newline" size="0.9rem" />
+            <icons :style="{visibility: tree.status.noProFirstNewline?'visible':'hidden'}" name="no_pre_newline_green" size="0.9rem" />
+            <icons :style="{visibility: tree.status.noProNewline?'visible':'hidden'}" name="no_newline_green" size="0.9rem" />
           </span>
         </span>
       </div>
@@ -188,13 +192,13 @@ export default {
           let pre = this.tree.status.noFirstNewline
           let suf = this.tree.status.noNewline
           if (!pre && !suf) {
-            this.tree.status.noNewline = true
-          } else if (!pre && suf) {
-            this.tree.status.noNewline = false
             this.tree.status.noFirstNewline = true
           } else if (pre && !suf) {
             this.tree.status.noNewline = true
             this.tree.status.noFirstNewline = true
+          } else if (pre && suf) {
+            this.tree.status.noNewline = true
+            this.tree.status.noFirstNewline = false
           } else {
             this.tree.status.noNewline = false
             this.tree.status.noFirstNewline = false
@@ -210,12 +214,24 @@ export default {
         } else {
           this.tree.status.noNewline = !this.tree.status.noNewline
         }
-        for (let subnode of this.$refs.subtrees) {
-          subnode.updateNewline({noNewline: this.tree.status.noNewline})
+        if (!this.$refs.subtrees) {
+          this.updateFold(true)
+          setTimeout(() => {
+            for (let subnode of this.$refs.subtrees) {
+              subnode.updateNewline({noNewline: this.tree.status.noNewline})
+            }
+            this.$emit('update', {status:{newline: {
+              noNewline: this.tree.status.noNewline,
+            }} }, this.tree, this)
+          }, 0)
+        } else {
+          for (let subnode of this.$refs.subtrees) {
+            subnode.updateNewline({noNewline: this.tree.status.noNewline})
+          }
+          this.$emit('update', {status:{newline: {
+            noNewline: this.tree.status.noNewline,
+          }} }, this.tree, this)
         }
-        this.$emit('update', {status:{newline: {
-          noNewline: this.tree.status.noNewline,
-        }} }, this.tree, this)
       } else {
         if (status) {
           this.tree.status.noNewline = status.noNewline
@@ -226,6 +242,33 @@ export default {
           noNewline: this.tree.status.noNewline,
         }} }, this.tree, this)
       }
+    },
+    updateProNewline (status) {
+      if (status) {
+        this.tree.status.noProNewline = status.noProNewline
+        if (status.noProFirstNewline!==undefined) {
+          this.tree.status.noProFirstNewline = status.noProFirstNewline
+        }
+      } else {
+        let pre = this.tree.status.noProFirstNewline
+        let suf = this.tree.status.noProNewline
+        if (!pre && !suf) {
+          this.tree.status.noProFirstNewline = true
+        } else if (pre && !suf) {
+          this.tree.status.noProNewline = true
+          this.tree.status.noProFirstNewline = true
+        } else if (pre && suf) {
+          this.tree.status.noProNewline = true
+          this.tree.status.noProFirstNewline = false
+        } else {
+          this.tree.status.noProNewline = false
+          this.tree.status.noProFirstNewline = false
+        }
+      }
+      this.$emit('update', {status:{newline: {
+        noProNewline: this.tree.status.noProNewline,
+        noProFirstNewline: this.tree.status.noProFirstNewline,
+      }} }, this.tree, this)
     },
     updateFold (value) {
       if (this.tree.root) return

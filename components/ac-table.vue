@@ -220,7 +220,8 @@ export default {
           all: null
         },
         message: null,
-        treeComments: null
+        treeComments: null,
+        onProjectionChange: null,
       },
       message: {
         text: '',
@@ -640,7 +641,10 @@ export default {
         project.status.noProFirstNewline = noProFirstNewline
         project.status.noProNewline = noProNewline
       }
-      this.onProjectionChange(this.store.projectionFields, this.store.projectionFields)
+      clearTimeout(this.timers.onProjectionChange)
+      this.timers.onProjectionChange = setTimeout(() => {
+        this.onProjectionChange(this.store.projectionFields, this.store.projectionFields)
+      }, 200)
     },
     // others
     onTreeUpdate (change, value, origin) {
@@ -659,7 +663,6 @@ export default {
         this.updateProjectionStatus(origin.tree)
       } else if (change&&change.status&&change.status.newline) { // update newline
         this.updateDatabase(['tree'])
-        console.log('updateProjectionStatus:', origin.tree)
         this.updateProjectionStatus(origin.tree)
       } else { // update selected
         this.updateDatabase(['tree', 'treeState'])

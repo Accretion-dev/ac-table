@@ -151,16 +151,12 @@ import acTree from './ac-tree'
 import acTreeProjection from './ac-tree-projection'
 import icons from '../icons/icons.vue'
 
-/*
-TODO:
-* config system
-* watch change of data, struct, configs and filters
-* select, keyboard of projection
-* postive and negative mode of projection
-* pretty printer with
-  * noNewline and noPreNewline
-
-... more type of data (root could be array or simple type)
+/* TODO:
+* extra field system
+* filter system
+* sort system
+* table system
+* demo
 */
 
 export default {

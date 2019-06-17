@@ -69,6 +69,7 @@
             <ac-input
               v-model="store.configs[key][subkey]"
               :type="defaultConfigs[key][subkey].type"
+              :data="defaultConfigs[key][subkey].type==='boolean'?['true','false']:[]"
               :focus-select-all-text="true"
               :placeholder="defaultConfigs[key][subkey].type"
               :validator="validators[defaultConfigs[key][subkey].type]"
@@ -226,8 +227,8 @@ export default {
           showUndefined: { type: 'boolean', default: true, },
         },
         page: {
-          pageSize: { type: 'number', default: 10 },
-          tablePageSize: { type: 'number', default: 100 },
+          pageSize: { type: 'positive', default: 10 },
+          tablePageSize: { type: 'positive', default: 100 },
         }
       },
       validators: {
@@ -237,8 +238,13 @@ export default {
           }
         },
         number: value => {
+          if (!(value&&!isNaN(Number(value)))) {
+            return 'should be a number'
+          }
+        },
+        positive: value => {
           if (!(value&&!isNaN(Number(value))&&Number(value)>0)) {
-            return 'should be a >0 number'
+            return 'should be a positive number'
           }
         },
       }

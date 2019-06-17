@@ -180,6 +180,7 @@ export default {
       loading: true,
       analyser: null,
       filteredData: [],
+      sortedData: [],
       projectedData: {},
       pageData: [],
       projectedStrings: [],
@@ -770,6 +771,10 @@ export default {
         this.store.status.page = 0
         this.updateDatabase(['status'])
       }
+      this.onSortChange()
+    },
+    onSortChange () {
+      this.sortedData = this.filteredData
       this.onProjectionChange(this.store.projectionFields)
     },
     onProjectionChange (newProjects, oldProjects) {
@@ -779,7 +784,7 @@ export default {
         this.projectedData = {}
         for (let projection of this.store.projectionFields) {
           if (!projection.extra) { // normal fields
-            this.projectedData[projection.path] = this.analyser.getValueByPath(this.filteredData, projection.path)
+            this.projectedData[projection.path] = this.analyser.getValueByPath(this.sortedData, projection.path)
           } else { // extra fields
             this.projectedData[projection.path] = this.data.map(_ => projection.calculate(_))
           }
@@ -789,7 +794,7 @@ export default {
       if (this.store.projectionFields.length===0) { // no fields
         this.projectedStrings = []
       } else {
-        let result = this.prettyPrint(this.filteredData, this.store.projectionFields, this.tree)
+        let result = this.prettyPrint(this.sortedData, this.store.projectionFields, this.tree)
         this.projectedStrings = result
       }
       this.onPageChange(this.store.status.page)

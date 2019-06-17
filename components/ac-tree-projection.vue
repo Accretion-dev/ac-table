@@ -113,6 +113,26 @@ export default {
         this.$emit('update', {reorder: true})
       }
     },
+    updateNewline () {
+      let obj = this.projections.find(_ => this.getKey(_)===this.projectionState.selected)
+      if (!obj) return
+      if (obj.extra) {
+        // TODO: support extra
+      } else {
+        let path = obj.path
+        this.$parent.$refs.tree.nodes[path].updateNewline()
+      }
+    },
+    updateProNewline () {
+      let obj = this.projections.find(_ => this.getKey(_)===this.projectionState.selected)
+      if (!obj) return
+      if (obj.extra) {
+        // TODO: support extra
+      } else {
+        let path = obj.path
+        this.$parent.$refs.tree.nodes[path].updateProNewline()
+      }
+    },
     keydown (event) {
       if (event.shiftKey) {
         switch (event.key) {
@@ -123,6 +143,10 @@ export default {
           case 'ArrowDown':
             event.preventDefault()
             this.moveSelect(1)
+            break
+          case 'N':
+            event.preventDefault()
+            this.updateProNewline()
             break
         }
       } else {
@@ -147,6 +171,10 @@ export default {
             if (children) {
               this.$emit('update', {deleteProjection: children.data})
             }
+            break
+          case 'n':
+            event.preventDefault()
+            this.updateNewline()
             break
         }
       }

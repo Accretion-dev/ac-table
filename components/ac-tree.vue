@@ -130,6 +130,10 @@ export default {
             event.preventDefault();
             if (node) node.updateNewline()
             break
+          case 'o':
+            event.preventDefault();
+            if (node) node.updateProjection(true)
+            break
         }
       }
     },

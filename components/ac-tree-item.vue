@@ -4,6 +4,7 @@
       [tree.root?`${prefixCls}-root`:prefixCls]: true,
     }"
     @click.stop="onclick"
+    @dblclick.stop="ondblclick"
   >
     <!-- [`${prefixCls}-selected`]: this.level&&this.treeState.selected===this.tree.path -->
     <template v-if="tree.children">  <!--not root but have children-->
@@ -284,10 +285,10 @@ export default {
         }
       }
     },
-    updateProjection () {
+    updateProjection (only) {
       if (this.tree.root) return
       let status = !this.tree.status.projection
-      this.$emit('update', {status:{projection:status}}, this.tree, this)
+      this.$emit('update', {status:{projection:status, only}}, this.tree, this)
     },
     updateSelected (value) {
       if (value) {
@@ -337,6 +338,9 @@ export default {
       } else {
         this.$emit('update', {treeState:{selected: this.tree.path}}, this.tree, this)
       }
+    },
+    ondblclick (event) {
+      this.updateProjection()
     },
     onupdate (change, value, origin) {
       this.$emit('update', change, value, origin)

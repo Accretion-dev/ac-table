@@ -524,7 +524,6 @@ export default {
     },
     // keyboard
     keydown (event) {
-      console.log('keydown in ac-table:', event)
       switch (event.key) {
         case 'Escape':
           event.preventDefault()
@@ -652,7 +651,19 @@ export default {
       if (change&&change.storeUpdate) {
         this.updateDatabase(change.storeUpdate)
       } else if (change&&change.status&&change.status.projection!==undefined) {
-        if (change.status.projection) {
+        if (change.status.only) {
+          for (let each of this.store.projectionFields) {
+            if (!each.extra) {
+              let path = each.path
+              let node = this.$refs.tree.nodes[path]
+              if (node) {
+                node.tree.status.projection = false
+              }
+            }
+          }
+          this.store.projectionFields = []
+          this.addProjection(origin.tree)
+        } else if (change.status.projection) {
           this.addProjection(origin.tree)
         } else {
           let obj = this.store.projectionFields.find(_ => _.path===origin.tree.path && !_.extra)

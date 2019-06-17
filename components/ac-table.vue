@@ -646,6 +646,7 @@ export default {
           }
         }
         this.updateDatabase(['tree', 'projectionFields'])
+        this.updateProjectionStatus(origin.tree)
       } else if (change&&change.status&&change.status.newline) { // update newline
         this.updateDatabase(['tree'])
         this.updateProjectionStatus(origin.tree)
@@ -779,6 +780,17 @@ export default {
       if (tree.type==='mixed') {
         tree = tree.children.find(_ => _.type === type)
       }
+      if (data===undefined) {
+        if (this.store.configs.projection.showUndefined) {
+          if (tree&&tree.status&&tree.status.noNewline) {
+            return `${data}, `
+          } else {
+            return `${data},\n${prefix0}`
+          }
+        } else {
+          return undefined
+        }
+      }
       if (!(tree)) {
         return JSON.stringify(data)+',\n'+prefix0
       }
@@ -870,9 +882,9 @@ export default {
           if (!projection.status.show) continue
           let thisresult
           if (!projection.extra) { // normal fields
-              let thistree = this.analyser.getTypeByPath(projection.path)
-              let thisdata = this.analyser.getValueByPath(eachdata, projection.path)
-              thisresult = this._prettyPrint(thisdata, thistree, 1)
+            let thistree = this.analyser.getTypeByPath(projection.path)
+            let thisdata = this.analyser.getValueByPath(eachdata, projection.path)
+            thisresult = this._prettyPrint(thisdata, thistree, 1)
           } else { // extra fields
             if (projection.formatter) {
               thisresult = projection.formatter(projection.calculate(eachdata))

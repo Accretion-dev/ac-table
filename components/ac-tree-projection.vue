@@ -82,6 +82,21 @@ export default {
         }
       }
     },
+    moveSelect (status) {
+      if (this.projections.length<=1) return
+      if (this.projectionState.selected) {
+        let oldIndex = this.projections.findIndex(_ => this.getKey(_)===this.projectionState.selected)
+        let newIndex
+        if (oldIndex === -1) {
+          return
+        } else {
+          newIndex = (oldIndex + status + this.projections.length)%this.projections.length
+        }
+        let [deleted] = this.projections.splice(oldIndex,1)
+        this.projections.splice(newIndex,0,deleted)
+        this.$emit('update', {reorder: true})
+      }
+    },
     onupdate (change) {
       if (change.changeSelect) {
         if (this.projectionState.selected) {
@@ -96,9 +111,11 @@ export default {
         switch (event.key) {
           case 'ArrowUp':
             event.preventDefault()
+            this.moveSelect(-1)
             break
           case 'ArrowDown':
             event.preventDefault()
+            this.moveSelect(1)
             break
         }
       } else {

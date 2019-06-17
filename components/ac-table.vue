@@ -680,7 +680,7 @@ export default {
     },
     onProjectionUpdate (change) {
       this.updateDatabase(['projectionState'])
-      if (change.changeShow) {
+      if (change.changeShow||change.reorder) {
         this.updateDatabase(['projectionFields'])
         clearTimeout(this.timers.onProjectionChange)
         this.timers.onProjectionChange = setTimeout(() => {
@@ -689,6 +689,7 @@ export default {
       }
       if (change.deleteProjection) {
         this.removeProjection(change.deleteProjection)
+        this.updateDatabase(['tree', 'projectionFields'])
         clearTimeout(this.timers.onProjectionChange)
         this.timers.onProjectionChange = setTimeout(() => {
           this.onProjectionChange(this.store.projectionFields, this.store.projectionFields)

@@ -7,17 +7,21 @@
     <div :class="`${prefixCls}-tool-bar`">
       <span
         :class="`${prefixCls}-tools-button`"
-        @click="add"
+        @click="clickAdd"
       > + </span>
     </div>
-    <ac-tree-extra-field-item v-for="(data, index) of extraField"
-      :key="data.path"
-      :data="data"
+    <ac-tree-extra-field-item v-for="(thisdata, index) of extraField"
+      :key="thisdata.path"
+      :data="thisdata"
       :index="index"
       :extra-field-state="extraFieldState"
+      :extra-field="extraField"
+      :nodes="nodes"
+      @update="onupdate"
     />
     <ac-tree-extra-field-item v-if="status.adding"
       ref="adding"
+      key="adding"
       :data="newData()"
       :extra-field-state="extraFieldState"
       :extra-field="extraField"
@@ -27,6 +31,11 @@
 </template>
 
 <script>
+/* comments:
+ * do not use data.name as key in ac-tree-extra-field-item
+ *   because every time you change data.name, will redraw this component, cause update bugs
+*/
+
 const prefixCls = 'ac-tree-extra-field'
 import acTreeExtraFieldItem from './ac-tree-extra-field-item'
 
@@ -42,7 +51,8 @@ export default {
       prefixCls,
       status: {
         adding: false
-      }
+      },
+      nodes: {},
     }
   },
   watch:{
@@ -59,7 +69,7 @@ export default {
     newData () {
       return {
         name: "newField",
-        path: "newField",
+        path: (new Date()).toISOString(), // uid
         type: 'string',
         arrayType: '',
         extraField: true,
@@ -67,18 +77,22 @@ export default {
         js: "v",
         func: "",
         status: {
+          projection: false,
+          editing: true,
           selected: false,
           noFirstNewline: false,
           noNewline: false,
-        }
+        },
       }
     },
-    add (event) {
+    clickAdd (event) {
       this.status.adding = !this.status.adding
       if (this.status.adding) {
         setTimeout(() => {
           this.$refs.adding.focus()
         },0)
+      } else {
+        this.$el.focus()
       }
     },
     changeShow (key) {
@@ -87,6 +101,20 @@ export default {
         children.changeShow()
       }
       this.$emit('update', {changeShow: true})
+    },
+    changeProjection (key, only) {
+      let child = this.$children.find(_ => _.$vnode.data.key===key)
+      if (child) {
+        if (only) {
+          this.$emit('update', {status: {projection: true, only: true}}, child)
+        } else {
+          if (child.data.status.projection) {
+            this.$emit('update', {status: {projection: false}}, child)
+          } else {
+            this.$emit('update', {status: {projection: true}}, child)
+          }
+        }
+      }
     },
     setSelected (key, status) {
       let children = this.$children.find(_ => _.$vnode.data.key===key)
@@ -97,33 +125,33 @@ export default {
     changeSelect (status) {
       if (!this.extraField.length) return
       if (!status) {
-        if (this.extraFieldtate.selected) {
-          this.setSelected(this.extraFieldtate.selected, true)
+        if (this.extraFieldState.selected) {
+          this.setSelected(this.extraFieldState.selected, true)
         }
       } else {
-        if (!this.extraFieldtate.selected) {
-          this.extraFieldtate.selected = this.getKey(this.extraField[0])
-          this.setSelected(this.extraFieldtate.selected, true)
+        if (!this.extraFieldState.selected) {
+          this.extraFieldState.selected = this.extraField[0]
+          this.setSelected(this.extraFieldState.selected, true)
           this.$emit('update', {changeSelect: true})
         } else {
-          this.setSelected(this.extraFieldtate.selected, false)
-          let index = this.extraField.findIndex(_ => this.getKey(_)===this.extraFieldtate.selected)
+          this.setSelected(this.extraFieldState.selected, false)
+          let index = this.extraField.findIndex(_ => _.path===this.extraFieldState.selected)
           if (index === -1) {
             index = 0
           } else {
             index = (index + status + this.extraField.length)%this.extraField.length
           }
-          let key = this.getKey(this.extraField[index])
-          this.extraFieldtate.selected = key
-          this.setSelected(this.extraFieldtate.selected, true)
+          let key = this.extraField[index].path
+          this.extraFieldState.selected = key
+          this.setSelected(this.extraFieldState.selected, true)
           this.$emit('update', {changeSelect: true})
         }
       }
     },
     moveSelect (status) {
       if (this.extraField.length<=1) return
-      if (this.extraFieldtate.selected) {
-        let oldIndex = this.extraField.findIndex(_ => this.getKey(_)===this.extraFieldtate.selected)
+      if (this.extraFieldState.selected) {
+        let oldIndex = this.extraField.findIndex(_ => _.path===this.extraFieldState.selected)
         let newIndex
         if (oldIndex === -1) {
           return
@@ -137,24 +165,24 @@ export default {
     },
     onupdate (change, value) {
       if (change.add) {
-        this.$emit('update', change)
+        this.clickAdd()
       }
       if (change.changeSelect) {
-        if (this.extraFieldtate.selected) {
-          this.setSelected(this.extraFieldtate.selected, false)
+        if (this.extraFieldState.selected) {
+          this.setSelected(this.extraFieldState.selected, false)
         }
-        this.extraFieldtate.selected = this.getKey(change.changeSelect)
+        this.extraFieldState.selected = change.changeSelect.path
         this.changeSelect(0)
       }
       if (change.reorder) {
         let {start,end} = change.reorder
         let [deleted] = this.extraField.splice(start,1)
         this.extraField.splice(end,0,deleted)
-        this.$emit('update', {reorder: true})
       }
+      this.$emit('update', change)
     },
     updateNewline () {
-      let obj = this.extraField.find(_ => this.getKey(_)===this.extraFieldtate.selected)
+      let obj = this.extraField.find(_ => _.path===this.extraFieldState.selected)
       if (!obj) return
       if (obj.extra) {
         // TODO: support extra
@@ -164,7 +192,7 @@ export default {
       }
     },
     updateProNewline () {
-      let obj = this.extraField.find(_ => this.getKey(_)===this.extraFieldtate.selected)
+      let obj = this.extraField.find(_ => _.path===this.extraFieldState.selected)
       if (!obj) return
       if (obj.extra) {
         // TODO: support extra
@@ -203,18 +231,27 @@ export default {
             break
           case 's':
             event.preventDefault()
-            this.changeShow(this.extraFieldtate.selected)
+            this.changeShow(this.extraFieldState.selected)
             break
+          case 'd':
           case '-':
             event.preventDefault()
-            let children = this.$children.find(_ => _.$vnode.data.key===this.extraFieldtate.selected)
+            let children = this.$children.find(_ => _.$vnode.data.key===this.extraFieldState.selected)
             if (children) {
-              this.$emit('update', {deleteProjection: children.data})
+              this.$emit('update', {deleted: children.data})
             }
             break
           case 'n':
             event.preventDefault()
             this.updateNewline()
+            break
+          case 'a':
+            event.preventDefault()
+            this.clickAdd()
+            break
+          case 'p':
+            event.preventDefault()
+            this.changeProjection(this.extraFieldState.selected)
             break
         }
       }

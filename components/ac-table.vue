@@ -614,14 +614,14 @@ export default {
         },0)
       }
     },
-    addProjection (tree, extraField) {
+    addProjection (tree) {
       tree.status.projection = true
       let toAdd = {
         name: tree.name,
         path: tree.path, // uid for extraFields
         type: tree.type,
         arrayType: tree.arrayType,
-        extraField,
+        extraField: tree.extraField,
         status: {
           show: true,
           noNewline: tree.status&&tree.status.noNewline,
@@ -636,7 +636,7 @@ export default {
       let index = this.store.projection.findIndex(_ => _===obj)
       let tree
       if (obj.extraField) {
-        tree = this.extraField.find(_ => _.path === obj.path)
+        tree = this.store.extraField.find(_ => _.path === obj.path)
       } else {
         tree = this.$refs.tree.nodes[obj.path].tree
       }
@@ -739,14 +739,19 @@ export default {
         funcStr[funcStr.length-1] = `return ${str}`
       }
       let str = funcStr.join('\n')
-      data.func = new Function('v', str)
+      //data.func = new Function('v', str)
       console.log({data})
     },
-    onExtraFieldUpdate (change) {
+    onExtraFieldUpdate (change, origin) {
+      console.log('opExtraFieldUpdate', change)
       if (change.add) {
         this.processExtraFieldData(change.add)
+        this.store.extraField.push(change.add)
         this.updateDatabase(['extraField'])
-        this.updateDatabase(['extraFieldState'])
+      }
+      if (change.modify) {
+        this.processExtraFieldData(change.modify)
+        this.updateDatabase(['extraField'])
       }
       if (change.changeShow||change.reorder) {
         this.updateDatabase(['extraField'])
@@ -760,10 +765,30 @@ export default {
         this.updateDatabase(['extraField'])
         this.updateDatabase(['extraFieldState'])
       }
-      //if (change.add) {
-      //  this.store.extraField.push(change.add)
-      //  this.updateDatabase(['extraField'])
-      //}
+      if (change.status&&change.status.projection!==undefined) {
+        if (change.status.only) {
+          for (let each of this.store.projection) {
+            if (each.extraField) {
+              let path = each.path
+              let node = this.$refs.extraField.nodes[path]
+              if (node) {
+                node.data.status.projection = false
+              }
+            }
+          }
+          this.store.projection = []
+          this.addProjection(origin.data)
+        } else if (change.status.projection) {
+          this.addProjection(origin.data)
+        } else {
+          let obj = this.store.projection.find(_ => _.path===origin.tree.path && _.extraField)
+          if (obj) {
+            this.removeProjection(obj)
+          }
+        }
+        this.updateDatabase(['tree', 'projection'])
+        this.updateProjectionStatus(origin.data)
+      }
     },
     goThrough(root, func) {
       func(root)
@@ -843,7 +868,11 @@ export default {
           if (!projection.extraField) { // normal fields
             this.projectedData[projection.path] = this.analyser.getValueByPath(this.sortedData, projection.path)
           } else { // extra fields
-            this.projectedData[projection.path] = this.data.map(_ => projection.calculate(_))
+            if (projection.func) {
+              this.projectedData[projection.path] = this.data.map(_ => projection.func(_))
+            } else {
+              this.projectedData[projection.path] = this.data.map(_ => undefined)
+            }
           }
         }
       }
@@ -980,6 +1009,7 @@ export default {
           projection = projections[index]
           if (!projection.status.show) continue
           let thisresult
+          let showName
           if (!projection.extraField) { // normal fields
             let thistree = this.analyser.getTypeByPath(projection.path)
             let thisdata = this.analyser.getValueByPath(eachdata, projection.path)
@@ -999,15 +1029,23 @@ export default {
               thattree = thistree
             }
             thisresult = this._prettyPrint(thisdata, thattree, 1, configs)
+            showName = projection.path
           } else { // extra fields
             if (projection.formatter) {
               thisresult = projection.formatter(projection.func(eachdata))
-            } else {
+            } else if (projection.func) {
               thisresult = projection.func(eachdata)
+            } else {
+              thisresult = undefined
             }
+            showName = projection.name
           }
           if (configs.projection.showUndefined || thisresult !== undefined) {
-            term.push(`${projection.path}: ${thisresult}`)
+            let toPush = `${showName}: ${thisresult}`
+            if (thisresult===undefined) {
+              toPush = toPush + ',\n  '
+            }
+            term.push(toPush)
           }
         }
         if (term.length) term[term.length-1] = term[term.length-1].slice(0,-2)

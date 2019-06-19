@@ -4,7 +4,7 @@
     :class="{
     [`${prefixCls}`]: true,
     [`${prefixCls}-not-show`]: !this.data.status.show,
-    [`${this.prefixCls}-selected`]: selected}"
+    [`${prefixCls}-selected`]: selected}"
     @click="click"
     @dragover="dragover"
     @dragleave="dragleave"
@@ -22,7 +22,7 @@
       </span>
     </span>
     <b class="ac-unselectable">{{data.name}}:</b>
-    <span class="ac-unselectable" v-if="!data.extra">{{data.path}}</span>
+    <span class="ac-unselectable" v-if="!data.extraField">{{data.path}}</span>
     <icons :style="{visibility: data.status.noFirstNewline?'visible':'hidden'}" name="no_pre_newline" size="0.9rem"/>
     <icons :style="{visibility: data.status.noNewline?'visible':'hidden'}" name="no_newline" size="0.9rem"/>
   </div>

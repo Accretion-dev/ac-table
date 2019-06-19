@@ -1,17 +1,18 @@
 <template>
   <div
-    :draggable="!status.editing"
+    :draggable="!data.status.editing"
     :class="{
     [`${prefixCls}`]: true,
-    [`${this.prefixCls}-selected`]: selected}"
+    [`${prefixCls}-selected`]: selected}"
     @click="click"
+    @dblclick="dblclick"
     @dragover="dragover"
     @dragleave="dragleave"
     @drop="drop"
     @dragstart="dragstart"
     @dragend="dragend"
   >
-    <div :class="`${this.prefixCls}-editing`" v-if="status.editing">
+    <div :class="`${this.prefixCls}-editing`" v-if="data.status.editing">
       <div :class="`${this.prefixCls}-form-line`">
         <b> name: </b>
         <ac-input
@@ -19,7 +20,6 @@
           v-model="data.name"
           :focus-select-all-text="true"
           placeholder="name"
-          :reportDelay="200"
           @report="onreport('type')"
         />
       </div>
@@ -31,20 +31,19 @@
           :focus-select-all-text="true"
           placeholder="type"
           droptype="select"
-          :data="['string','date','number','array','object']"
-          :reportDelay="200"
+          :data="typeLists"
           @report="onreport(data.type==='array'?'arrayType':'js')"
         />
       </div>
       <div :class="`${this.prefixCls}-form-line`" v-if="data.type==='array'">
-        <b> type: </b>
+        <b> arrayType: </b>
         <ac-input
-          ref="type"
+          ref="arrayType"
           v-model="data.arrayType"
           :focus-select-all-text="true"
           placeholder="arrayType"
-          :data="['string','date','number','array','object']"
-          :reportDelay="200"
+          :data="typeLists"
+          @report="onreport('js')"
         />
       </div>
       <div :class="`${this.prefixCls}-form-line`">
@@ -54,7 +53,6 @@
           v-model="data.js"
           :focus-select-all-text="true"
           placeholder="js"
-          :reportDelay="200"
           @report="onreport('report')"
         />
       </div>
@@ -69,11 +67,14 @@
             <span class="ac-unselectable">&nbsp;</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">&nbsp;</span>
           </span>
         </span>
-        <b class="ac-unselectable">{{data.path}}:</b>
+        <b class="ac-unselectable">{{data.name}}</b>
         <icons :style="{visibility: data.status.noFirstNewline?'visible':'hidden'}" name="no_pre_newline" size="0.9rem"/>
         <icons :style="{visibility: data.status.noNewline?'visible':'hidden'}" name="no_newline" size="0.9rem"/>
       </div>
-      <pre>{{data.js}}</pre>
+      <div style="display:inline-flex;">
+        <span class="ac-unselectable">&nbsp;&nbsp;</span>
+        <pre style="margin: 0px;padding-left: 0.9em;">{{data.js}}</pre>
+      </div>
     </div>
   </div>
 </template>
@@ -101,6 +102,7 @@ export default {
     extraFieldState: {type: Object, required: true},
     extraField: {type: Array, required: true},
     index: {type: Number, default: -1},
+    nodes: { type: Object },
   },
   data () {
     return {
@@ -108,16 +110,18 @@ export default {
       typeMap,
       selected: false,
       status: {
-        editing: true,
         dragover: 0,
         elDrag: null
       },
+      typeLists:['string','date','number','array','object'],
     }
   },
   watch:{
-    'data.name' (value) {
-      data.path = value
-    }
+    'data.type' (value) {
+      if (value !== 'array') {
+        this.data.arrayType = ""
+      }
+    },
   },
   computed: {
     icon () {
@@ -141,26 +145,50 @@ export default {
     }
   },
   created() {
+    if (this.nodes) {
+      this.nodes[this.data.path] = this
+    }
   },
   mounted () {
   },
   methods: {
     onreport (value) {
       if (value==='report') {
-        let exists = this.extraField.find(_ => _.path = this.data.path)
-        if (!exists) {
-          console.log('report it')
-          this.$emit('update', {add: this.data})
+        if (this.index!==-1) { // modify exists
+          this.data.status.editing = false
+          this.$emit('update', {modify: this.data})
+        } else { // add new
+          let exists = this.extraField.find(_ => _.name === this.data.name)
+          if (!exists) {
+            this.data.status.editing = false
+            this.$emit('update', {add: this.data})
+          } else {
+            this.$refs.name.setError('duplicated name')
+          }
         }
       } else {
-        this.$refs[value].focus()
+        this.$nextTick(() => {
+          this.$refs[value].focus()
+        })
       }
     },
     focus () {
-      this.$refs.name.focus()
+      if (this.data.status.editing) {
+        this.$refs.name.focus()
+      } else {
+        this.$el.focus()
+      }
+    },
+    dblclick () {
+      if (this.data.status.editing) return
+      this.data.status.editing = !this.data.status.editing
+      this.$forceUpdate()
+      this.$nextTick(() => {
+        this.focus()
+      })
     },
     click (event) {
-      if (!this.status.editing) {
+      if (!this.data.status.editing) {
         this.$emit('update', {changeSelect: this.data})
       }
     },
@@ -244,7 +272,7 @@ $pre: ac-tree-extra-field-item;
 .#{$pre}-display:hover {
   background: #d8ffd7;
 }
-.#{$pre}-display-selected {
+.#{$pre}-selected {
   background: #d8ffd775;
 }
 .#{$pre}-drag-upper {

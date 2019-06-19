@@ -42,7 +42,7 @@ export default {
   },
   methods: {
     getKey (data) {
-      return `${data.extra?'e__':'f__'}${data.path}`
+      return `${data.extraField?'e__':'f__'}${data.path}`
     },
     changeShow (key) {
       let children = this.$children.find(_ => _.$vnode.data.key===key)
@@ -116,7 +116,7 @@ export default {
     updateNewline () {
       let obj = this.projections.find(_ => this.getKey(_)===this.projectionState.selected)
       if (!obj) return
-      if (obj.extra) {
+      if (obj.extraField) {
         // TODO: support extra
       } else {
         let path = obj.path
@@ -126,7 +126,7 @@ export default {
     updateProNewline () {
       let obj = this.projections.find(_ => this.getKey(_)===this.projectionState.selected)
       if (!obj) return
-      if (obj.extra) {
+      if (obj.extraField) {
         // TODO: support extra
       } else {
         let path = obj.path

@@ -733,7 +733,7 @@ export default {
         }, 500)
       }
     },
-    genExtraFunction (js) {
+    genExtraFunction (js, value) {
       let lines = js.split('\n')
       let funcStr = []
       for (let line of lines) {
@@ -747,7 +747,8 @@ export default {
         funcStr[funcStr.length-1] = `return ${str}`
       }
       let str = funcStr.join('\n')
-      return new Function('v', str)
+      let func = new Function('v,e', str)
+      return func
     },
     onExtraFieldUpdate (change, origin) {
       console.log('opExtraFieldUpdate', change)
@@ -1048,15 +1049,19 @@ export default {
                 func = this.genExtraFunction(projection.js)
                 extraFieldFunctions.set(projection.js, func)
               }
-              thisresult = func(eachdata)
+
+              let extractor = (path) => this.analyser.getValueByPath(eachdata, path)
+              thisresult = func(eachdata, extractor)
+
               if (thisresult!==undefined) {
-                if (projection.type === 'array' || projection.type === 'object') {
+                let type = this.analyser.getType(thisresult)
+                if (type === 'array' || type === 'object') {
                   if (projection.status.noFirstNewline) {
                     thisresult = JSON.stringify(thisresult)
                     if (projection.status.noNewline) {
-                      thisresult = `${JSON.stringify(thisresult)}, `
+                      thisresult = `${thisresult}, `
                     } else {
-                      thisresult = `${JSON.stringify(thisresult)},\n  `
+                      thisresult = `${thisresult},\n  `
                     }
                   } else {
                     thisresult = JSON.stringify(thisresult,null,2)
@@ -1096,7 +1101,6 @@ export default {
         term = term.join('')
         result.push(term)
       }
-      console.log('functions:', extraFieldFunctions)
       return result
     },
   }

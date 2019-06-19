@@ -21,8 +21,8 @@
         <span class="ac-unselectable">&nbsp;</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">&nbsp;</span>
       </span>
     </span>
-    <b class="ac-unselectable">{{data.name}}:</b>
-    <span class="ac-unselectable" v-if="!data.extraField">{{data.path}}</span>
+    <b class="ac-unselectable">{{data.name}}</b>
+    <span class="ac-unselectable" v-if="!data.extraField">:{{data.path}}</span>
     <icons :style="{visibility: data.status.noFirstNewline?'visible':'hidden'}" name="no_pre_newline" size="0.9rem"/>
     <icons :style="{visibility: data.status.noNewline?'visible':'hidden'}" name="no_newline" size="0.9rem"/>
   </div>

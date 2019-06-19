@@ -615,13 +615,16 @@ export default {
       }
     },
     addProjection (tree) {
+      let exists = this.store.projection.find(_ => _.path===tree.path && _.extraField===tree.extraField)
       tree.status.projection = true
+      if (exists) return
       let toAdd = {
         name: tree.name,
         path: tree.path, // uid for extraFields
         type: tree.type,
         arrayType: tree.arrayType,
         extraField: tree.extraField,
+        js: tree.js,
         status: {
           show: true,
           noNewline: tree.status&&tree.status.noNewline,
@@ -647,8 +650,9 @@ export default {
       //let tree = this.$refs.tree.nodes[obj.path].tree
       //let status = obj.status
       //tree.updateNewline(status)
-      let project = this.store.projection.find(_ => _.path===obj.path)
+      let project = this.store.projection.find(_ => _.path===obj.path&&_.extraField===obj.extraField)
       if (project) {
+        console.log('update projection:', obj)
         let noFirstNewline = obj.status.noFirstNewline
         let noNewline = obj.status.noNewline
         let noProFirstNewline = obj.status.noProFirstNewline
@@ -657,11 +661,14 @@ export default {
         project.status.noNewline = noNewline
         project.status.noProFirstNewline = noProFirstNewline
         project.status.noProNewline = noProNewline
+        project.type = obj.type
+        project.arrayType = obj.arrayType
+        clearTimeout(this.timers.onProjectionChange)
+        this.timers.onProjectionChange = setTimeout(() => {
+          this.onProjectionChange(this.store.projection, this.store.projection)
+        }, this.store.configs.projection.debounceDelay)
+        this.updateDatabase(['projection'])
       }
-      clearTimeout(this.timers.onProjectionChange)
-      this.timers.onProjectionChange = setTimeout(() => {
-        this.onProjectionChange(this.store.projection, this.store.projection)
-      }, this.store.configs.projection.debounceDelay)
     },
     // others
     onTreeUpdate (change, value, origin) {
@@ -688,7 +695,7 @@ export default {
             this.removeProjection(obj)
           }
         }
-        this.updateDatabase(['tree', 'projection'])
+        this.updateDatabase(['tree'])
         this.updateProjectionStatus(origin.tree)
       } else if (change&&change.status&&change.status.newline) { // update newline
         this.updateDatabase(['tree'])
@@ -724,8 +731,7 @@ export default {
         }, 500)
       }
     },
-    processExtraFieldData (data) {
-      let js = data.js
+    genExtraFunction (js) {
       let lines = js.split('\n')
       let funcStr = []
       for (let line of lines) {
@@ -739,19 +745,17 @@ export default {
         funcStr[funcStr.length-1] = `return ${str}`
       }
       let str = funcStr.join('\n')
-      //data.func = new Function('v', str)
-      console.log({data})
+      return new Function('v', str)
     },
     onExtraFieldUpdate (change, origin) {
       console.log('opExtraFieldUpdate', change)
       if (change.add) {
-        this.processExtraFieldData(change.add)
         this.store.extraField.push(change.add)
         this.updateDatabase(['extraField'])
       }
       if (change.modify) {
-        this.processExtraFieldData(change.modify)
         this.updateDatabase(['extraField'])
+        this.updateProjectionStatus(change.modify)
       }
       if (change.changeShow||change.reorder) {
         this.updateDatabase(['extraField'])
@@ -764,6 +768,10 @@ export default {
         }
         this.updateDatabase(['extraField'])
         this.updateDatabase(['extraFieldState'])
+      }
+      if (change.status&&change.status.newline) {
+        this.updateDatabase(['extraField'])
+        this.updateProjectionStatus(origin.data)
       }
       if (change.status&&change.status.projection!==undefined) {
         if (change.status.only) {
@@ -786,7 +794,7 @@ export default {
             this.removeProjection(obj)
           }
         }
-        this.updateDatabase(['tree', 'projection'])
+        this.updateDatabase(['tree'])
         this.updateProjectionStatus(origin.data)
       }
     },
@@ -999,6 +1007,7 @@ export default {
       let term
       let result = []
       let projection
+      let extraFieldFunctions = new Map()
       for (let eachdata of data) {
         if (!tree.status.noFirstNewline) {
           term = ['{\n  ']
@@ -1010,10 +1019,10 @@ export default {
           if (!projection.status.show) continue
           let thisresult
           let showName
+          let thattree
           if (!projection.extraField) { // normal fields
             let thistree = this.analyser.getTypeByPath(projection.path)
             let thisdata = this.analyser.getValueByPath(eachdata, projection.path)
-            let thattree
             if (projection.path.includes('>')) {
               thattree = {
                 name: thistree.name,
@@ -1031,10 +1040,42 @@ export default {
             thisresult = this._prettyPrint(thisdata, thattree, 1, configs)
             showName = projection.path
           } else { // extra fields
-            if (projection.formatter) {
-              thisresult = projection.formatter(projection.func(eachdata))
-            } else if (projection.func) {
-              thisresult = projection.func(eachdata)
+            if (projection.js) {
+              let func = extraFieldFunctions.get(projection.js)
+              if (!func) {
+                func = this.genExtraFunction(projection.js)
+                extraFieldFunctions.set(projection.js, func)
+              }
+              thisresult = func(eachdata)
+              if (thisresult!==undefined) {
+                if (projection.type === 'array' || projection.type === 'object') {
+                  if (projection.status.noFirstNewline) {
+                    thisresult = JSON.stringify(thisresult)
+                    if (projection.status.noNewline) {
+                      thisresult = `${JSON.stringify(thisresult)}, `
+                    } else {
+                      thisresult = `${JSON.stringify(thisresult)},\n  `
+                    }
+                  } else {
+                    thisresult = JSON.stringify(thisresult,null,2)
+                    let lines = thisresult.split('\n')
+                    let newlines = lines.map((_,index) => '  '+_)
+                    newlines[0] = newlines[0].slice(2)
+                    if (projection.status.noNewline) {
+                      newlines[newlines.length-1] = newlines[newlines.length-1]+', '
+                    } else {
+                      newlines[newlines.length-1] = newlines[newlines.length-1]+',\n  '
+                    }
+                    thisresult = newlines.join('\n')
+                  }
+                } else {
+                  if (projection.status.noNewline) {
+                    thisresult = `${JSON.stringify(thisresult)}, `
+                  } else {
+                    thisresult = `${JSON.stringify(thisresult)},\n  `
+                  }
+                }
+              }
             } else {
               thisresult = undefined
             }
@@ -1053,6 +1094,7 @@ export default {
         term = term.join('')
         result.push(term)
       }
+      console.log('functions:', extraFieldFunctions)
       return result
     },
   }

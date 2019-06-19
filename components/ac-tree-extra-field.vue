@@ -163,7 +163,7 @@ export default {
         this.$emit('update', {reorder: true})
       }
     },
-    onupdate (change, value) {
+    onupdate (change, origin) {
       if (change.add) {
         this.clickAdd()
       }
@@ -179,27 +179,13 @@ export default {
         let [deleted] = this.extraField.splice(start,1)
         this.extraField.splice(end,0,deleted)
       }
-      this.$emit('update', change)
+      this.$emit('update', change, origin)
     },
     updateNewline () {
       let obj = this.extraField.find(_ => _.path===this.extraFieldState.selected)
       if (!obj) return
-      if (obj.extra) {
-        // TODO: support extra
-      } else {
-        let path = obj.path
-        this.$parent.$refs.tree.nodes[path].updateNewline()
-      }
-    },
-    updateProNewline () {
-      let obj = this.extraField.find(_ => _.path===this.extraFieldState.selected)
-      if (!obj) return
-      if (obj.extra) {
-        // TODO: support extra
-      } else {
-        let path = obj.path
-        this.$parent.$refs.tree.nodes[path].updateProNewline()
-      }
+      let path = obj.path
+      this.nodes[path].updateNewline()
     },
     keydown (event) {
       if (event.shiftKey) {
@@ -211,10 +197,6 @@ export default {
           case 'ArrowDown':
             event.preventDefault()
             this.moveSelect(1)
-            break
-          case 'N':
-            event.preventDefault()
-            this.updateProNewline()
             break
         }
       } else {
@@ -252,6 +234,11 @@ export default {
           case 'p':
             event.preventDefault()
             this.changeProjection(this.extraFieldState.selected)
+            break
+          case 'Enter':
+            event.preventDefault()
+            let child = this.$children.find(_ => _.data.path===this.extraFieldState.selected)
+            if (child) child.dblclick()
             break
         }
       }

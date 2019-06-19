@@ -156,12 +156,12 @@ export default {
       if (value==='report') {
         if (this.index!==-1) { // modify exists
           this.data.status.editing = false
-          this.$emit('update', {modify: this.data})
+          this.$emit('update', {modify: this.data}, this)
         } else { // add new
           let exists = this.extraField.find(_ => _.name === this.data.name)
           if (!exists) {
             this.data.status.editing = false
-            this.$emit('update', {add: this.data})
+            this.$emit('update', {add: this.data}, this)
           } else {
             this.$refs.name.setError('duplicated name')
           }
@@ -171,6 +171,30 @@ export default {
           this.$refs[value].focus()
         })
       }
+    },
+    updateNewline (status) {
+      if (this.data.type==='object' || this.data.type==='array') {
+        let pre = this.data.status.noFirstNewline
+        let suf = this.data.status.noNewline
+        if (!pre && !suf) {
+          this.data.status.noNewline = true
+        } else if (!pre && suf) {
+          this.data.status.noNewline = true
+          this.data.status.noFirstNewline = true
+        } else if (pre && suf) {
+          this.data.status.noFirstNewline = true
+          this.data.status.noNewline = false
+        } else {
+          this.data.status.noNewline = false
+          this.data.status.noFirstNewline = false
+        }
+      } else {
+        this.data.status.noNewline = !this.data.status.noNewline
+      }
+      this.$emit('update', {status:{newline: {
+        noNewline: this.data.status.noNewline,
+        noFirstNewline: this.data.status.noFirstNewline,
+      }}}, this)
     },
     focus () {
       if (this.data.status.editing) {

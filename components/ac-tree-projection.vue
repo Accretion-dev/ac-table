@@ -117,7 +117,8 @@ export default {
       let obj = this.projections.find(_ => this.getKey(_)===this.projectionState.selected)
       if (!obj) return
       if (obj.extraField) {
-        // TODO: support extra
+        let path = obj.path
+        this.$parent.$refs.extraField.nodes[path].updateNewline()
       } else {
         let path = obj.path
         this.$parent.$refs.tree.nodes[path].updateNewline()
@@ -126,9 +127,7 @@ export default {
     updateProNewline () {
       let obj = this.projections.find(_ => this.getKey(_)===this.projectionState.selected)
       if (!obj) return
-      if (obj.extraField) {
-        // TODO: support extra
-      } else {
+      if (!obj.extraField) {
         let path = obj.path
         this.$parent.$refs.tree.nodes[path].updateProNewline()
       }

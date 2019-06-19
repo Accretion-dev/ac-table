@@ -60,6 +60,9 @@ export default {
     //console.log('nodes:', this.nodes)
   },
   methods: {
+    goToProjection (tree) {
+      this.$emit('update', {goToProjection: tree})
+    },
     selectNode(newObj, oldObj) {
       if (oldObj!==undefined&&this.nodes[oldObj]) {
         this.nodes[oldObj].updateSelected(false)
@@ -75,8 +78,8 @@ export default {
       }
     },
     keydown (event) {
+      let node = this.nodes[this.treeState.selected]
       if (event.shiftKey) {
-        let node = this.nodes[this.treeState.selected]
         if (node) {
           switch (event.key) {
             case 'ArrowRight':
@@ -96,7 +99,6 @@ export default {
           }
         }
       } else {
-        let node = this.nodes[this.treeState.selected]
         switch (event.key) {
           case 'ArrowRight':
           case 'l':
@@ -133,6 +135,10 @@ export default {
           case 'o':
             event.preventDefault();
             if (node) node.updateProjection(true)
+            break
+          case 'g':
+            event.preventDefault();
+            if (node) this.goToProjection(node.tree)
             break
         }
       }

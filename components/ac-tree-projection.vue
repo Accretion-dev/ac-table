@@ -41,6 +41,14 @@ export default {
     this.setSelected(selected, true)
   },
   methods: {
+    goToOrigin () {
+      let key = this.projectionState.selected
+      let child = this.$children.find(_ => _.$vnode.data.key===key)
+      if (child) {
+        let data = child.data
+        this.$emit('update', {goToOrigin: data})
+      }
+    },
     getKey (data) {
       return `${data.extraField?'e__':'f__'}${data.path}`
     },
@@ -59,11 +67,11 @@ export default {
     },
     changeSelect (status) {
       if (!this.projections.length) return
-      if (!status) {
+      if (status === undefined) { // reselect, e.g. at init
         if (this.projectionState.selected) {
           this.setSelected(this.projectionState.selected, true)
         }
-      } else {
+      } else if (typeof(status)==='number') { // move updown
         if (!this.projectionState.selected) {
           this.projectionState.selected = this.getKey(this.projections[0])
           this.setSelected(this.projectionState.selected, true)
@@ -81,6 +89,13 @@ export default {
           this.setSelected(this.projectionState.selected, true)
           this.$emit('update', {changeSelect: true})
         }
+      } else { // status is a project element
+        let obj = status
+        this.setSelected(this.projectionState.selected, false)
+        let key = this.getKey(obj)
+        this.projectionState.selected = key
+        this.setSelected(this.projectionState.selected, true)
+        this.$emit('update', {changeSelect: true})
       }
     },
     moveSelect (status) {
@@ -104,7 +119,7 @@ export default {
           this.setSelected(this.projectionState.selected, false)
         }
         this.projectionState.selected = this.getKey(change.changeSelect)
-        this.changeSelect(0)
+        this.changeSelect()
       }
       if (change.reorder) {
         let {start,end} = change.reorder
@@ -174,6 +189,10 @@ export default {
           case 'n':
             event.preventDefault()
             this.updateNewline()
+            break
+          case 'g':
+            event.preventDefault()
+            this.goToOrigin()
             break
         }
       }

@@ -98,13 +98,6 @@ export default {
         this.$el.focus()
       }
     },
-    changeShow (key) {
-      let children = this.$children.find(_ => _.$vnode.data.key===key)
-      if (children) {
-        children.changeShow()
-      }
-      this.$emit('update', {changeShow: true})
-    },
     changeProjection (key, only) {
       let child = this.$children.find(_ => _.$vnode.data.key===key)
       if (child) {
@@ -127,11 +120,11 @@ export default {
     },
     changeSelect (status) {
       if (!this.extraField.length) return
-      if (!status) {
+      if (status === undefined) { // reselect, e.g. at init
         if (this.extraFieldState.selected) {
           this.setSelected(this.extraFieldState.selected, true)
         }
-      } else {
+      } else if (typeof(status)==='number') { // move updown
         if (!this.extraFieldState.selected) {
           this.extraFieldState.selected = this.extraField[0]
           this.setSelected(this.extraFieldState.selected, true)
@@ -149,6 +142,13 @@ export default {
           this.setSelected(this.extraFieldState.selected, true)
           this.$emit('update', {changeSelect: true})
         }
+      } else { // status is a project element
+        let obj = status
+        this.setSelected(this.extraFieldState.selected, false)
+        let key = status.path
+        this.extraFieldState.selected = key
+        this.setSelected(this.extraFieldState.selected, true)
+        this.$emit('update', {changeSelect: true})
       }
     },
     moveSelect (status) {
@@ -175,7 +175,7 @@ export default {
           this.setSelected(this.extraFieldState.selected, false)
         }
         this.extraFieldState.selected = change.changeSelect.path
-        this.changeSelect(0)
+        this.changeSelect()
       }
       if (change.reorder) {
         let {start,end} = change.reorder
@@ -196,6 +196,12 @@ export default {
       if (!obj) return
       let path = obj.path
       this.nodes[path].updateNewline()
+    },
+    goToProjection () {
+      let children = this.$children.find(_ => _.$vnode.data.key===this.extraFieldState.selected)
+      if (children) {
+        this.$emit('update', {goToProjection: children.data})
+      }
     },
     keydown (event) {
       if (event.shiftKey) {
@@ -221,10 +227,6 @@ export default {
             event.preventDefault()
             this.changeSelect(1)
             break
-          case 's':
-            event.preventDefault()
-            this.changeShow(this.extraFieldState.selected)
-            break
           case 'd':
           case '-':
             event.preventDefault()
@@ -243,7 +245,17 @@ export default {
             break
           case 'p':
             event.preventDefault()
+            // put this function here because nodes is changing
             this.changeProjection(this.extraFieldState.selected)
+            break
+          case 'o':
+            event.preventDefault()
+            // put this function here because nodes is changing
+            this.changeProjection(this.extraFieldState.selected, true)
+            break
+          case 'g':
+            event.preventDefault()
+            this.goToProjection()
             break
           case 'Enter':
             event.preventDefault()

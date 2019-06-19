@@ -216,11 +216,14 @@ export default {
         this.$emit('update', {changeSelect: this.data})
       }
     },
+    select () {
+      this.$emit('update', {changeSelect: this.data})
+    },
     changeSelect (status) {
       this.selected = status
-    },
-    changeShow () {
-      this.data.status.show = !this.data.status.show
+      if (status) {
+        this.focus()
+      }
     },
     dragover (event) {
       event.preventDefault()

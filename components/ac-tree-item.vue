@@ -323,6 +323,9 @@ export default {
         this.$refs.vbar.style.removeProperty('background')
       }
     },
+    select () {
+      this.$emit('update', {treeState:{selected: this.tree.path}}, this.tree, this)
+    },
     onclick (event, direct) {
       const goodType = ['array', 'object', 'mixed']
       if (this.tree.root) {

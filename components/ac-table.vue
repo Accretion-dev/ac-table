@@ -702,6 +702,14 @@ export default {
       } else if (change&&change.status&&change.status.newline) { // update newline
         this.updateDatabase(['tree'])
         this.updateProjectionStatus(origin.tree)
+      } else if (change&&change.goToProjection) { // update newline
+        let go = change.goToProjection
+        let project = this.store.projection.find(_ => _.path===go.path&&!!_.extraField===false)
+        if (project) {
+          this.store.status.sidebar = 'projection'
+          this.$refs.projection.changeSelect(project)
+          this.updateDatabase(['status'])
+        }
       } else { // update selected
         this.updateDatabase(['tree', 'treeState'])
       }
@@ -716,8 +724,8 @@ export default {
       }
     },
     onProjectionUpdate (change) {
-      this.updateDatabase(['projectionState'])
       if (change.changeShow||change.reorder) {
+        this.updateDatabase(['projectionState'])
         this.updateDatabase(['projection'])
         clearTimeout(this.timers.onProjectionChange)
         this.timers.onProjectionChange = setTimeout(() => {
@@ -725,12 +733,31 @@ export default {
         }, 500)
       }
       if (change.deleteProjection) {
+        this.updateDatabase(['projectionState'])
         this.removeProjection(change.deleteProjection)
         this.updateDatabase(['tree', 'projection'])
         clearTimeout(this.timers.onProjectionChange)
         this.timers.onProjectionChange = setTimeout(() => {
           this.onProjectionChange(this.store.projection, this.store.projection)
         }, 500)
+      }
+      if (change.goToOrigin) {
+        let data = change.goToOrigin
+        if (data.extraField) { // goto extraField
+          let extraField = this.$refs.extraField.nodes[data.path]
+          if (extraField) {
+            this.store.status.sidebar = 'extraField'
+            extraField.select()
+            this.updateDatabase(['status'])
+          }
+        } else { // goto tree
+          let tree = this.$refs.tree.nodes[data.path]
+          if (tree) {
+            this.store.status.sidebar = 'tree'
+            tree.select()
+            this.updateDatabase(['status'])
+          }
+        }
       }
     },
     genExtraFunction (js, value) {
@@ -792,13 +819,22 @@ export default {
         } else if (change.status.projection) {
           this.addProjection(origin.data)
         } else {
-          let obj = this.store.projection.find(_ => _.path===origin.tree.path && _.extraField)
+          let obj = this.store.projection.find(_ => _.path===origin.data.path)
           if (obj) {
             this.removeProjection(obj)
           }
         }
         this.updateDatabase(['tree'])
         this.updateProjectionStatus(origin.data)
+      }
+      if (change.goToProjection) { // update newline
+        let go = change.goToProjection
+        let project = this.store.projection.find(_ => _.path===go.path&&_.extraField)
+        if (project) {
+          this.store.status.sidebar = 'projection'
+          this.$refs.projection.changeSelect(project)
+          this.updateDatabase(['status'])
+        }
       }
     },
     goThrough(root, func) {

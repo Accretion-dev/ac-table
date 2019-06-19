@@ -78,20 +78,25 @@ class JsonAnalyser {
       return 'undefined'
     } else if (data === null) {
       return 'null'
-    } else if (typeof(data) === 'boolean') {
-      return 'boolean'
-    } else if (typeof(data) === 'number') {
-      return 'number'
-    } else if (typeof(data) === 'string') {
-      if (isNaN(Number(new Date(data))) || !data.includes('T')) {
-        return 'string'
-      } else {
-        return 'date'
-      }
-    } else if (Array.isArray(data)) {
-      return 'array'
     } else {
-      return 'object'
+      let type = typeof(data)
+      if (type === 'boolean') {
+        return 'boolean'
+      } else if (type === 'number') {
+        return 'number'
+      } else if (type === 'function') {
+        return 'function'
+      } else if (type === 'string') {
+        if (!isNaN(Number(new Date(data))) && data.includes('T')) {
+          return 'date'
+        } else {
+          return 'string'
+        }
+      } else if (Array.isArray(data)) {
+        return 'array'
+      } else {
+        return 'object'
+      }
     }
   }
   _analysis (object, tree) {

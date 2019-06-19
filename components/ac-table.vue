@@ -650,9 +650,9 @@ export default {
       //let tree = this.$refs.tree.nodes[obj.path].tree
       //let status = obj.status
       //tree.updateNewline(status)
-      let project = this.store.projection.find(_ => _.path===obj.path&&_.extraField===obj.extraField)
+      let project = this.store.projection.find(_ => _.path===obj.path&&!!_.extraField===!!obj.extraField)
+      console.log('update projection:', obj, project)
       if (project) {
-        console.log('update projection:', obj)
         let noFirstNewline = obj.status.noFirstNewline
         let noNewline = obj.status.noNewline
         let noProFirstNewline = obj.status.noProFirstNewline
@@ -661,14 +661,16 @@ export default {
         project.status.noNewline = noNewline
         project.status.noProFirstNewline = noProFirstNewline
         project.status.noProNewline = noProNewline
+        project.name = obj.name
         project.type = obj.type
         project.arrayType = obj.arrayType
-        clearTimeout(this.timers.onProjectionChange)
-        this.timers.onProjectionChange = setTimeout(() => {
-          this.onProjectionChange(this.store.projection, this.store.projection)
-        }, this.store.configs.projection.debounceDelay)
-        this.updateDatabase(['projection'])
       }
+      // should be outside, in case you change newline of nested structure
+      clearTimeout(this.timers.onProjectionChange)
+      this.timers.onProjectionChange = setTimeout(() => {
+        this.onProjectionChange(this.store.projection, this.store.projection)
+      }, this.store.configs.projection.debounceDelay)
+      this.updateDatabase(['projection'])
     },
     // others
     onTreeUpdate (change, value, origin) {

@@ -673,21 +673,30 @@ export default {
       this.updateDatabase(['projection'])
     },
     // others
+    cleanProjection () {
+      for (let each of this.store.projection) {
+        if (!each.extraField) { // clean tree
+          let path = each.path
+          let node = this.$refs.tree.nodes[path]
+          if (node) {
+            node.tree.status.projection = false
+          }
+        } else { // clean extraField
+          let path = each.path
+          let node = this.$refs.extraField.nodes[path]
+          if (node) {
+            node.data.status.projection = false
+          }
+        }
+      }
+      this.store.projection = []
+    },
     onTreeUpdate (change, value, origin) {
       if (change&&change.storeUpdate) {
         this.updateDatabase(change.storeUpdate)
       } else if (change&&change.status&&change.status.projection!==undefined) {
         if (change.status.only) {
-          for (let each of this.store.projection) {
-            if (!each.extraField) {
-              let path = each.path
-              let node = this.$refs.tree.nodes[path]
-              if (node) {
-                node.tree.status.projection = false
-              }
-            }
-          }
-          this.store.projection = []
+          this.cleanProjection()
           this.addProjection(origin.tree)
         } else if (change.status.projection) {
           this.addProjection(origin.tree)
@@ -695,6 +704,8 @@ export default {
           let obj = this.store.projection.find(_ => _.path===origin.tree.path && !_.extraField)
           if (obj) {
             this.removeProjection(obj)
+          } else {
+            origin.tree.status.projection = false
           }
         }
         this.updateDatabase(['tree'])
@@ -805,16 +816,7 @@ export default {
       }
       if (change.status&&change.status.projection!==undefined) {
         if (change.status.only) {
-          for (let each of this.store.projection) {
-            if (each.extraField) {
-              let path = each.path
-              let node = this.$refs.extraField.nodes[path]
-              if (node) {
-                node.data.status.projection = false
-              }
-            }
-          }
-          this.store.projection = []
+          this.cleanProjection()
           this.addProjection(origin.data)
         } else if (change.status.projection) {
           this.addProjection(origin.data)
@@ -822,6 +824,8 @@ export default {
           let obj = this.store.projection.find(_ => _.path===origin.data.path)
           if (obj) {
             this.removeProjection(obj)
+          } else {
+            origin.data.status.projection = false
           }
         }
         this.updateDatabase(['tree'])

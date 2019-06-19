@@ -289,6 +289,11 @@ export default {
       if (this.tree.root) return
       let status = !this.tree.status.projection
       this.$emit('update', {status:{projection:status, only}}, this.tree, this)
+      //if (only) {
+      //  this.tree.status.projection = true
+      //} else {
+      //  this.tree.status.projection = !this.tree.status.projection
+      //}
     },
     updateSelected (value) {
       if (value) {

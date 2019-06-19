@@ -103,12 +103,14 @@ export default {
       if (child) {
         if (only) {
           this.$emit('update', {status: {projection: true, only: true}}, child)
+          //child.data.status.projection = true
         } else {
           if (child.data.status.projection) {
             this.$emit('update', {status: {projection: false}}, child)
           } else {
             this.$emit('update', {status: {projection: true}}, child)
           }
+          //child.data.status.projection = !child.data.status.projection
         }
       }
     },

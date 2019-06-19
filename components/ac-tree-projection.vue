@@ -150,10 +150,12 @@ export default {
     keydown (event) {
       if (event.shiftKey) {
         switch (event.key) {
+          case 'K':
           case 'ArrowUp':
             event.preventDefault()
             this.moveSelect(-1)
             break
+          case 'J':
           case 'ArrowDown':
             event.preventDefault()
             this.moveSelect(1)

@@ -787,7 +787,6 @@ export default {
       return func
     },
     onExtraFieldUpdate (change, origin) {
-      console.log('opExtraFieldUpdate', change)
       if (change.add) {
         this.store.extraField.push(change.add)
         this.updateDatabase(['extraField'])
@@ -807,6 +806,7 @@ export default {
         }
         this.updateDatabase(['extraField'])
         this.updateDatabase(['extraFieldState'])
+        this.updateProjectionStatus(change.deleted)
       }
       if (change.status&&change.status.newline) {
         this.updateDatabase(['extraField'])

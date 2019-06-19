@@ -149,6 +149,11 @@ export default {
       this.nodes[this.data.path] = this
     }
   },
+  beforeDestroy() {
+    if (this.nodes) {
+      delete this.nodes[this.data.path]
+    }
+  },
   mounted () {
   },
   methods: {

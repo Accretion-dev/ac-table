@@ -22,7 +22,7 @@
     <ac-tree-extra-field-item v-if="status.adding"
       ref="adding"
       key="adding"
-      :data="newData()"
+      :data="newData"
       :extra-field-state="extraFieldState"
       :extra-field="extraField"
       @update="onupdate"
@@ -53,6 +53,7 @@ export default {
         adding: false
       },
       nodes: {},
+      newData: {},
     }
   },
   watch:{
@@ -60,13 +61,14 @@ export default {
   computed: {
   },
   created() {
+    this.newData = this.genNewData()
   },
   mounted () {
     let selected = this.extraFieldState.selected
     this.setSelected(selected, true)
   },
   methods: {
-    newData () {
+    genNewData () {
       return {
         name: "newField",
         path: (new Date()).toISOString(), // uid
@@ -88,6 +90,7 @@ export default {
     clickAdd (event) {
       this.status.adding = !this.status.adding
       if (this.status.adding) {
+        this.newData = this.genNewData()
         setTimeout(() => {
           this.$refs.adding.focus()
         },0)
@@ -178,6 +181,13 @@ export default {
         let {start,end} = change.reorder
         let [deleted] = this.extraField.splice(start,1)
         this.extraField.splice(end,0,deleted)
+      }
+      if (change.modify) {
+        setTimeout(() => {
+          if (this.$el) {
+            this.$el.focus()
+          }
+        })
       }
       this.$emit('update', change, origin)
     },

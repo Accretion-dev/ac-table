@@ -157,7 +157,6 @@ import acTreeExtraField from './ac-tree-extra-field'
 import icons from '../icons/icons.vue'
 
 /* TODO:
-* extra field system
 * filter system
 * sort system
 * table system
@@ -651,7 +650,6 @@ export default {
       //let status = obj.status
       //tree.updateNewline(status)
       let project = this.store.projection.find(_ => _.path===obj.path&&!!_.extraField===!!obj.extraField)
-      console.log('update projection:', obj, project)
       if (project) {
         let noFirstNewline = obj.status.noFirstNewline
         let noNewline = obj.status.noNewline

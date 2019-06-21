@@ -34,6 +34,9 @@
         <span name="extraField" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='extraField'}">
           <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">E</span>
         </span>
+        <span name="filter" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='filter'}">
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">F</span>
+        </span>
       </div>
       <span @click="cleanCurrentDatabase">
         cleanCuurent
@@ -113,6 +116,14 @@
               :extra-field-state="store.extraFieldState"
               @update="onExtraFieldUpdate"
             />
+            <ac-tree-filter
+              v-show="store.status.sidebar==='filter'"
+              ref="filter"
+              :tree="store.tree"
+              :filter="store.filter"
+              :filter-state="store.filterState"
+              @update="onExtraFieldUpdate"
+            />
           </div>
         </div>
         <div v-show="status.showSidebar"
@@ -154,6 +165,7 @@ import { openDB, deleteDB, wrap, unwrap } from 'idb'
 import acTree from './ac-tree'
 import acTreeProjection from './ac-tree-projection'
 import acTreeExtraField from './ac-tree-extra-field'
+import acTreeFilter from './ac-tree-filter'
 import icons from '../icons/icons.vue'
 
 /* TODO:
@@ -165,7 +177,7 @@ import icons from '../icons/icons.vue'
 
 export default {
   name: 'ac-table',
-  components: {acTree, acTreeProjection, acTreeExtraField, icons},
+  components: {acTree, acTreeProjection, acTreeExtraField, acTreeFilter, icons},
   props: {
     data: { type: Array, default () { return [] } },
     configs: { type: Object, default: null },
@@ -197,6 +209,10 @@ export default {
         },
         extraField: [],
         extraFieldState: {
+          selected: null,
+        },
+        filter: [],
+        filterState: {
           selected: null,
         },
         configs: {},
@@ -291,7 +307,7 @@ export default {
       set (value) {
         this.switchPage(value, true)
       }
-    }
+    },
   },
   watch: {
     'store.treeState.comments' (value) {
@@ -479,6 +495,13 @@ export default {
         this.store.extraField = this.extraField
       }
     },
+    setStorefilters (value) {
+      if (value) {
+        this.store.filter = value
+      } else {
+        this.store.filter = this.filter
+      }
+    },
     setStoreProjections (value) {
       if (value) {
         this.store.projection = value
@@ -573,7 +596,7 @@ export default {
       }
     },
     switchTab (value) {
-      let tabs = ['tree', 'projection', 'extraField']
+      let tabs = ['tree', 'projection', 'extraField', 'filter']
       let cIndex = tabs.findIndex(_ => _===this.store.status.sidebar)
       let nIndex = (cIndex + tabs.length + value) % tabs.length
       this.store.status.sidebar = tabs[nIndex]
@@ -606,6 +629,8 @@ export default {
         el = this.$refs.projection&&this.$refs.projection.$el
       } else if (value==='extraField') {
         el = this.$refs.extraField&&this.$refs.extraField.$el
+      } else if (value==='filter') {
+        el = this.$refs.filter&&this.$refs.filter.$el
       }
       if (el) {
         setTimeout(() => {
@@ -642,7 +667,9 @@ export default {
       } else {
         tree = this.$refs.tree.nodes[obj.path].tree
       }
-      tree.status.projection = false
+      if (tree) {
+        tree.status.projection = false
+      }
       this.store.projection.splice(index, 1)
     },
     updateProjectionStatus (obj) {
@@ -837,6 +864,29 @@ export default {
           this.$refs.projection.changeSelect(project)
           this.updateDatabase(['status'])
         }
+      }
+    },
+    onFilterUpdate (change, origin) {
+      if (change.add) {
+        this.store.filter.push(change.add)
+        this.updateDatabase(['filter'])
+      }
+      if (change.modify) {
+        this.updateDatabase(['filter'])
+        this.updateProjectionStatus(change.modify)
+      }
+      if (change.changeShow||change.reorder) {
+        this.updateDatabase(['filter'])
+      }
+      if (change.deleted) {
+        this.removeProjection(change.deleted)
+        let index = this.store.filter.findIndex(_ => _===change.deleted)
+        if (index !== -1) {
+          this.store.filter.splice(index, 1)
+        }
+        this.updateDatabase(['filter'])
+        this.updateDatabase(['filterState'])
+        this.updateProjectionStatus(change.deleted)
       }
     },
     goThrough(root, func) {

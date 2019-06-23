@@ -20,7 +20,14 @@ const prefixCls = 'ac-tree-filter-struct-item'
 function parser (value) {
   return {
     cursor (cursor) {
-      return {extract: value, range: null}
+      if (
+        (value.startsWith('"')&&value.endsWith('"')) ||
+        (value.startsWith('"')&&value.endsWith('"'))
+      ) {
+        return {extract: value.slice(1,-1), range: null}
+      } else {
+        return {extract: value, range: null}
+      }
     },
     complete (cursor, oldValue, newValue) {
       if (!oldValue) {

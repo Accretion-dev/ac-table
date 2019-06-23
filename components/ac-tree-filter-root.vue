@@ -1,34 +1,44 @@
 <template>
-  <div :class="`${prefixCls}`">
-    <ac-input-cursor
-      v-model="data.string"
-      placeholder="root"
-      ref='input'
-      :data="autocompleteData"
-      :cursor.sync="cursor"
-      :cursor-start.sync="cursorStart"
+  <span :class="`${prefixCls}`">
+    <ac-input
+      ref='wsBegin'
+      v-if="struct.wsBegin !== null"
+      v-model="struct.wsBegin"
+      placeholder=""
+      :border="false"
+      :onfocus="testFocus('focus begin')"
+      @cursorMove="cursorMove('wsBegin', $event)"
     />
-  </div>
+    <struct-item
+      ref='value'
+      :tree="tree"
+      parent="root"
+      :value="struct.value"
+      @cursorMove="cursorMove('value', $event)"
+    />
+    <ac-input
+      ref='wsEnd'
+      v-if="struct.wsEnd !== null"
+      v-model="struct.wsEnd"
+      placeholder=""
+      :border="false"
+      :onfocus="testFocus('focus end')"
+      @cursorMove="cursorMove('wsEnd', $event)"
+    />
+  </span>
 </template>
 
 <script>
 const prefixCls = 'ac-tree-filter-root'
-import value from './ac-tree-filter-value'
+import structItem from './ac-tree-filter-struct-item'
+import jsonFilterParser from 'mongodb-simple-query-syntax/pegjs/json-filter.js'
 
 function parser (value) {
-  return {
-    cursor (cursor) {
-      return {extract: value, range: null}
-    },
-    complete (cursor, oldValue, newValue) {
-      return {value: newValue, cursor:cursor-oldValue.length + newValue.length}
-    },
-  }
 }
 
 export default {
   name: 'ac-tree-filter-root',
-  components: {},
+  components: {structItem},
   props: {
     value: {type: String, default: ''},
     tree:  {type: Object, required: true},
@@ -36,58 +46,54 @@ export default {
   data () {
     return {
       prefixCls,
-      cursor: 0,
-      cursorStart: 0,
-      data: {
+      struct: {
         type: 'root',
-        child: { },
-        prefix: "",
-        suffix: "",
-        string: ""
-      },
-      autocompleteData: {
-        parser,
-        data: []
+        wsBegin: "",
+        wsEnd: "",
       }
     }
   },
-  watch:{
-  },
   computed: {
   },
+  watch:{
+  },
   created() {
-    let completeData = [
-      {
-        group: 'commands',
-        format: 'string',
-        always: false,
-        data: [
-          '$js',
-        ]
-      },
-      {
-        group: 'fields',
-        format: 'string',
-        always: false,
-        data: this.getTreePaths(this.tree)
-      }
-    ]
-    this.autocompleteData.data = completeData
+    this.updateStruct(this.value)
+    this.$watch('value', this.updateStruct)
   },
   beforeDestroy() {
   },
   mounted () {
   },
   methods: {
-    getTreePaths (tree, paths) {
-      if (!paths) paths = []
-      paths.push(tree.path)
-      if (tree.children) {
-        for (let each of tree.children) {
-          this.getTreePaths(each, paths)
+    testFocus (value) {
+      return () => {
+        console.log(value)
+      }
+    },
+    cursorMove (ref, data) {
+      let {delta, deleting} = data
+      if (ref === 'wsBegin') {
+        if (delta>0) {
+          this.$refs.value.cursorMove({delta, focus: true})
+        }
+      } else if (ref === 'value') {
+        if (delta>0) {
+          this.$refs.wsEnd.cursorMove({delta, focus: true, stay: true, deleting})
+        } else {
+          this.$refs.wsBegin.cursorMove({delta, focus: true, stay: true, deleting})
+        }
+      } else if (ref === 'wsEnd') {
+        if (delta<0) {
+          this.$refs.value.cursorMove({delta, focus: true})
         }
       }
-      return paths
+    },
+    updateStruct (string) {
+      this.struct = this.parse(string)
+    },
+    parse (value) {
+      return jsonFilterParser.parse(value)
     }
   }
 }
@@ -97,5 +103,12 @@ export default {
 $pre: ac-tree-filter-root;
 .#{$pre} {
   box-sizing: border-box;
+  border-style: solid;
+  border-width: thin;
+  width: max-content;
+  height: max-content;
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
 }
 </style>

@@ -85,7 +85,7 @@ export default {
         }
       } else if (ref === 'wsEnd') {
         if (delta<0) {
-          this.$refs.value.cursorMove({delta, focus: true})
+          this.$refs.value.cursorMove({delta, focus: true, deleting})
         }
       }
     },

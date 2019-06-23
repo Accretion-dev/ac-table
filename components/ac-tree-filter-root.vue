@@ -7,6 +7,7 @@
       placeholder=""
       :border="false"
       :onfocus="testFocus('focus begin')"
+      :oncreated="wsBeginCreated"
       @cursorMove="cursorMove('wsBegin', $event)"
     />
     <struct-item
@@ -15,6 +16,7 @@
       parent="root"
       :value="struct.value"
       @cursorMove="cursorMove('value', $event)"
+      @ws="onws"
     />
     <ac-input
       ref='wsEnd'
@@ -23,6 +25,7 @@
       placeholder=""
       :border="false"
       :onfocus="testFocus('focus end')"
+      :oncreated="wsEndCreated"
       @cursorMove="cursorMove('wsEnd', $event)"
     />
   </span>
@@ -50,12 +53,24 @@ export default {
         type: 'root',
         wsBegin: "",
         wsEnd: "",
+        value: {
+          value: "",
+          string: "",
+        }
       }
     }
   },
   computed: {
   },
   watch:{
+    'struct.wsBegin' (value) {
+      console.log('struct.wsBegin:', value)
+      this.struct.string = `${this.struct.wsBegin}${this.struct.value}${this.struct.wsEnd}`
+    },
+    'struct.wsEnd' (value) {
+      console.log('struct.wsEnd:', value)
+      this.struct.string = `${this.struct.wsBegin}${this.struct.value}${this.struct.wsEnd}`
+    },
   },
   created() {
     this.updateStruct(this.value)
@@ -66,34 +81,63 @@ export default {
   mounted () {
   },
   methods: {
+    wsBeginCreated (self) {
+      self.$watch('cursor',(cursor) => {
+        if (self.cursor === self.value.length) {
+          self.$emit('cursorMove', {
+            delta:0, direction: 'right', stay: true, focus: true
+          })
+        }
+      })
+    },
+    wsEndCreated (self) {
+      self.$watch('cursor',(cursor) => {
+        if (self.cursor === 0) {
+          self.$emit('cursorMove', {
+            delta:0, direction: 'left', stay: true, focus: true
+          })
+        }
+      })
+    },
     testFocus (value) {
       return () => {
         console.log(value)
       }
     },
     cursorMove (ref, data) {
-      let {delta, deleting} = data
+      let {delta, deleting, direction} = data
       if (ref === 'wsBegin') {
-        if (delta>0) {
-          this.$refs.value.cursorMove({delta, focus: true})
+        if (direction==='right'||delta>0) {
+          this.$refs.value.cursorMove({delta, focus: true, stay: true, direction})
         }
       } else if (ref === 'value') {
         if (delta>0) {
-          this.$refs.wsEnd.cursorMove({delta, focus: true, stay: true, deleting})
+          if (this.struct.wsEnd.length) {
+            this.$refs.wsEnd.cursorMove({delta, focus: true, stay: true, deleting, direction})
+          }
         } else {
-          this.$refs.wsBegin.cursorMove({delta, focus: true, stay: true, deleting})
+          if (this.struct.wsBegin.length) {
+            this.$refs.wsBegin.cursorMove({delta, focus: true, stay: true, deleting, direction})
+          }
         }
       } else if (ref === 'wsEnd') {
-        if (delta<0) {
-          this.$refs.value.cursorMove({delta, focus: true, deleting})
+        if (direction==='left'||delta<0) {
+          this.$refs.value.cursorMove({delta, focus: true, deleting, stay: true, direction})
         }
       }
     },
     updateStruct (string) {
-      this.struct = this.parse(string)
+      let parsed = this.parse(string)
+      this.$set(this, 'struct', parsed)
     },
     parse (value) {
       return jsonFilterParser.parse(value)
+    },
+    onws (data) {
+      console.log('onws:', data)
+      if (data.start) {
+        this.$refs.wsBegin.insertString(data.start, 'end')
+      }
     }
   }
 }

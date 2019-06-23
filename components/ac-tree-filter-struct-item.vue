@@ -1,7 +1,7 @@
 <template>
   <span :class="`${prefixCls}`">
     <ac-input-cursor
-      v-model="thisvalue"
+      v-model="value.string"
       placeholder="root"
       ref='input'
       :border="false"
@@ -94,12 +94,33 @@ export default {
       }
     ]
     this.autocompleteData.data = completeData
+    if (this.parent === 'root') {
+      this.$watch('value.string', (value) => {
+        const startsWithBlank = /(^[\s]+)/
+        if (startsWithBlank.test(value)) {
+          let blank = startsWithBlank.exec(value)
+          console.log(value, JSON.stringify(value), blank)
+          blank = blank[1]
+          let length = blank.length
+          value = value.slice(length)
+          this.$emit('ws', {start: blank, value})
+          // must use this emit, will have EXPECTED bug using this.value.string=value
+          // the bug is caused by unblocked "space" key event
+          this.$nextTick(() => {
+            this.value.string = value
+          })
+        }
+      })
+    }
   },
   beforeDestroy() {
   },
   mounted () {
   },
   methods: {
+    focus (cursor) {
+      this.$refs.input.focus(cursor)
+    },
     cursorMove (data) {
       this.$refs.input.cursorMove(data)
     },

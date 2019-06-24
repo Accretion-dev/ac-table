@@ -35,6 +35,7 @@
 const prefixCls = 'ac-tree-filter-root'
 import structItem from './ac-tree-filter-struct-item'
 import jsonFilterParser from 'mongodb-simple-query-syntax/pegjs/json-filter.js'
+import {parse, SyntaxError, Parser} from 'mongodb-simple-query-syntax/json-filter.js'
 
 function parser (value) {
 }

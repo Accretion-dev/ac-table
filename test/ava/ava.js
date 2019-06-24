@@ -127,7 +127,7 @@ function doTest(object, prefix, vglobal) {
     let path = prefix
     let value
     if (Object.keys(debugList).includes(path)) {
-      value = analyser.getValueByPath(example, path, debugList[path])
+      value = analyser.getValueByPath(example, path, null, debugList[path])
     } else {
       value = analyser.getValueByPath(example, path)
     }
@@ -168,7 +168,78 @@ function isNull(_) {
   return _ === null
 }
 
-test.only('test single json explore syntax', t => {
+test('test nested mod', t => {
+  let analyser = new JsonAnalyser()
+  let doAll = (todos) => {
+    let result = {}
+    for (let key of Object.keys(todos)) {
+      result[key] = analyser.getValueByPath(todos[key][2], todos[key][0], todos[key][1])
+      if (todos[key][3]) {
+        t.true(todos[key][3](result[key]))
+      }
+    }
+    return result
+  }
+  let now = (new Date()).toISOString()
+  let demo = [
+    1, '1', now,
+    [1, '1', now, [1, '1', now, ]],
+    {
+      number: 1,
+      string: '1',
+      date: now,
+      array: [
+        1, '1', now, [1, '1', now, ],
+        {
+          number: 1,
+          string: '1',
+          date: now,
+          array: [
+            1, '1', now, [1, '1', now, ]
+          ]
+        }
+      ],
+      object: {
+        number: 1,
+        string: '1',
+        date: now,
+        array: [
+          1, '1', now, [1, '1', now, ],
+          {
+            number: 1,
+            string: '1',
+            date: now,
+            array: [
+              1, '1', now, [1, '1', now, ]
+            ]
+          }
+        ],
+        object: {
+          number: 1,
+          string: '1',
+          date: now,
+        }
+      }
+    }
+  ]
+
+  let todos = {
+    'number':[ '@number', null, demo, (v) => v.filter(_ => _!==undefined)[0]===demo[0] ],
+    'string':[ '@string', null, demo, (v) => v.filter(_ => _!==undefined)[0]===demo[1] ],
+    'date':[ '@date', null, demo, (v) => v.filter(_ => _!==undefined)[0]===demo[2] ],
+    'array':[ '@array', null, demo, (v) => v.filter(_ => _!==undefined)[0]===demo[3] ],
+    'object':[ '@object', null, demo, (v) => v.filter(_ => _!==undefined)[0]===demo[4] ],
+    'object.number':[ 'number', null, demo, (v) => v.filter(_ => _!==undefined)[0]===1 ],
+    'nestedMode.@array':[ '@array', 0, demo, (v) => true ],
+    'nestedMode.>@number':[ '>@number', 0, demo, (v) => true ],
+    'nestedMode.>@number.1':[ '>@number', 1, demo, (v) => true ],
+    'nestedMode.>@array':  [ '>@array', 0, demo, (v) => true ],
+    'nestedMode.>@array.1':[ '>@array', 1, demo, (v) => true ],
+  }
+  let result = doAll(todos)
+  t.pass()
+})
+test('test single json explore syntax', t => {
   console.log('will take a long time...')
   let example
   let configs = {
@@ -3792,7 +3863,7 @@ test.only('test single json explore syntax', t => {
   if (vglobal.anybad) debugger
   t.pass()
 })
-test('test json explore syntax', t => {
+test.skip('test json explore syntax', t => {
   let analyser = new JsonAnalyser()
   let result = analyser.analysis(data)
   let types = {

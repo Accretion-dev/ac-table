@@ -247,7 +247,7 @@ class JsonAnalyser {
       }
     }
   }
-  _getValueByPath (data, paths, arrayDepth, totalArrayDepth, dictOnly, debug) {
+  _getValueByPath (data, paths, arrayDepth, dictOnly, debug) {
     if (debug) {
       console.log('paths:', JSON.stringify(paths), data, {arrayDepth,dictOnly})
       if (typeof(debug)==='function'&&debug(data, paths, arrayDepth,dictOnly)) {
@@ -277,7 +277,7 @@ class JsonAnalyser {
             } else {
               nextArrays = tail.slice(0,nextDotPos).filter(_ => _==='@inner')
             }
-            flattenDepth = nextArrays.length// + Number(totalArrayDepth>0)
+            flattenDepth = nextArrays.length
           }
           if (tail.length && goodTypeFlags.includes(tail[0])) {
             let type = tail[0].slice(1)
@@ -286,12 +286,12 @@ class JsonAnalyser {
           }
           if (tail.length && !fgoodTypeFlags.includes(tail[0])) {
             // if array of object, filter non objects
-            result = this._getValueByPath(data, tail, 0, totalArrayDepth, false, debug)
+            result = this._getValueByPath(data, tail, 0, false, debug)
             if (result === undefined) {
               return undefined
             }
           } else {
-            result = data.map(_ => this._getValueByPath(_, tail, arrayDepth+1, totalArrayDepth+1, false, debug))
+            result = data.map(_ => this._getValueByPath(_, tail, arrayDepth+1, false, debug))
           }
           if (flattenDepth) {
             result = _.flattenDepth(result, flattenDepth)
@@ -305,7 +305,7 @@ class JsonAnalyser {
         }
       } else if (goodTypes.includes(type)){
         if (thistype === type) {
-          result = this._getValueByPath(data, tail, arrayDepth, totalArrayDepth, false, debug)
+          result = this._getValueByPath(data, tail, arrayDepth, false, debug)
           return result
         } else {
           return undefined
@@ -320,7 +320,7 @@ class JsonAnalyser {
       if (subdata === undefined) {
         return undefined
       } else {
-        result = this._getValueByPath(subdata, tail, 0, totalArrayDepth, false, debug)
+        result = this._getValueByPath(subdata, tail, 0, false, debug)
         return result
       }
     } else if (thistype === 'array') { // only good for nested object in array
@@ -333,7 +333,7 @@ class JsonAnalyser {
         data = data.filter(_ => this.getType(_[head])===type)
       }
       let __ = data.map(_ => ({
-        value: this._getValueByPath(_, paths, 0, totalArrayDepth+1, true, debug),
+        value: this._getValueByPath(_, paths, 0, true, debug),
         type: this.getType(_[paths[0]]),
       }))
       let deep = tail.filter(_ => !goodTypeFlags.includes(_)).length
@@ -368,7 +368,7 @@ class JsonAnalyser {
       return undefined
     }
   }
-  getValueByPath (data, path, debug) {
+  getValueByPath (data, path, nestedMode, debug) {
     if (typeof(path) === 'string') {
       let paths = path.split('.')
       let newpaths = []
@@ -379,9 +379,14 @@ class JsonAnalyser {
             `${this.typeDelimiter}inner`
           )
         }
-        if (eachpath.includes(this.typeDelimiter)) {
+        if (eachpath.includes(this.typeDelimiter)) { // a@b@c => [a, @b, @c]
           let eachpaths = eachpath.split(this.typeDelimiter)
-          let newpath = [eachpaths[0], ...eachpaths.slice(1).map(_ => this.typeDelimiter+_)]
+          let newpath
+          if (eachpaths[0]) {
+            newpath = [eachpaths[0], ...eachpaths.slice(1).map(_ => this.typeDelimiter+_)]
+          } else { // @object => [@object], in nestedMode
+            newpath = [...eachpaths.slice(1).map(_ => this.typeDelimiter+_)]
+          }
           newpaths = [...newpaths, ...newpath]
         } else {
           newpaths.push(eachpath)
@@ -390,9 +395,13 @@ class JsonAnalyser {
       //console.log({path, newpaths})
       //if (path === 'aSNDAO.aS@array') debugger
       if (Array.isArray(data)) {
-        return data.map(_ => this._getValueByPath(_, newpaths, 0, 0, false, debug))
+        if (nestedMode !== null && nestedMode !== undefined) {
+          return this._getValueByPath(data, newpaths, nestedMode, false, debug)
+        } else {
+          return data.map(_ => this._getValueByPath(_, newpaths, 0, false, debug))
+        }
       } else {
-        return this._getValueByPath(data, newpaths, 0, 0, false, debug)
+        return this._getValueByPath(data, newpaths, 0, false, debug)
       }
     } else if (Array.isArray(path)) {
       let map = { }

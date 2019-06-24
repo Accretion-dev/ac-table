@@ -24,14 +24,10 @@
         />
       </div>
       <div :class="`${this.prefixCls}-form-line`">
-        <b> type: </b>
         <ac-tree-filter-root
           ref="content"
           v-model="data.content"
-          :focus-select-all-text="true"
           :tree="tree"
-          placeholder="content"
-          @report="onreport()"
         />
       </div>
     </div>

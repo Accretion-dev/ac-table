@@ -1,32 +1,10 @@
 <template>
   <span :class="`${prefixCls}`">
     <ac-input
-      ref='wsBegin'
-      v-if="struct.wsBegin !== null"
-      v-model="struct.wsBegin"
-      placeholder=""
-      :border="false"
-      :onfocus="testFocus('focus begin')"
-      :oncreated="wsBeginCreated"
-      @cursorMove="cursorMove('wsBegin', $event)"
-    />
-    <struct-item
       ref='value'
-      :tree="tree"
-      parent="root"
-      :value="struct.value"
-      @cursorMove="cursorMove('value', $event)"
-      @ws="onws"
-    />
-    <ac-input
-      ref='wsEnd'
-      v-if="struct.wsEnd !== null"
-      v-model="struct.wsEnd"
+      v-model="innerValue"
       placeholder=""
-      :border="false"
-      :onfocus="testFocus('focus end')"
-      :oncreated="wsEndCreated"
-      @cursorMove="cursorMove('wsEnd', $event)"
+      :data="inputData"
     />
   </span>
 </template>
@@ -35,14 +13,64 @@
 const prefixCls = 'ac-tree-filter-root'
 import structItem from './ac-tree-filter-struct-item'
 import jsonFilterParser from 'mongodb-simple-query-syntax/pegjs/json-filter.js'
-import {parse, SyntaxError, Parser} from 'mongodb-simple-query-syntax/json-filter.js'
+import _parser from 'mongodb-simple-query-syntax/json-filter.js'
+const {parse: jsonParse, Parser: jsonParser} = _parser
 
-function parser (value) {
-}
+/* operators and special keyString
+ * special keys: @js, @and, @or, @not
+ * operators: js, len, wlen, exists, and, or
+*/
+let demo = `
+  @js: 'v.title.split().length<=2'   ||
+  (title: white title: "white"   ||   title: 'Verde green')   ||
+  title:    ||
+  nonexists: 'true'   ||
+  title: /white|(Verde green)/   ||
+  (title|wlen: 3 || title|len: "<=5"  ||  title|wlen: ">=4 <=5")  ||
+  title|js: "v.split().length < 10"  ||
+  ex_date: "in:year:2018 >=01 <=02"  &&  ex_date: "2018-10"  ||
+  ((aS|len: "<=2" && !(aN|len: ">3")) || (value: "<10000"  value: ">1000")) ||
+  some random "string and blanks" ||
+  array: [] ||
+  array: [ ] ||
+  object: {} ||
+  object: { } ||
+  aN: [
+    @null|exists: true
+  ] ||
+  aN: [
+    @array|len: "<3",
+    @array>|every: ">0",
+  ] ||
+  aN: [
+    @array|len: "<3",
+    @array>: ">0"
+  ] ||
+  aN: [
+    @array|len: "<3",
+    @array>|have: ">0"
+  ] ||
+  aSNDAMO@array|len: ">5" ||
+  aSNDAMO@array>|len: ">5" ||
+  aSNDAMO@array>|or: [
+    @number: ">0 <1000",
+    {@date: "in:2018-01"},
+  ] ||
+  aSND|or: [
+    @and: [
+      @null|exists: true,
+    ],
+    {
+      @and: [
+        @array|js: "v.length<3",
+        @array>@number: "<1000",
+      ]
+    }
+  ]
+`
 
 export default {
   name: 'ac-tree-filter-root',
-  components: {structItem},
   props: {
     value: {type: String, default: ''},
     tree:  {type: Object, required: true},
@@ -50,94 +78,93 @@ export default {
   data () {
     return {
       prefixCls,
-      struct: {
-        type: 'root',
-        wsBegin: "",
-        wsEnd: "",
-        value: {
-          value: "",
-          string: "",
-        }
+      innerValue: '',
+      parser: null,
+      inputData: {
+        parser: null,
+        data: []
       }
     }
   },
   computed: {
   },
   watch:{
-    'struct.wsBegin' (value) {
-      console.log('struct.wsBegin:', value)
-      this.struct.string = `${this.struct.wsBegin}${this.struct.value}${this.struct.wsEnd}`
+    value (newValue, oldValue) {
+      this.innerValue = newValue
+      this.parser.parse(this.value)
+      console.log(this.parser.simpleResult())
     },
-    'struct.wsEnd' (value) {
-      console.log('struct.wsEnd:', value)
-      this.struct.string = `${this.struct.wsBegin}${this.struct.value}${this.struct.wsEnd}`
-    },
+    innerValue (newValue, oldValue) {
+      this.$emit('input', newValue)
+    }
   },
   created() {
-    this.updateStruct(this.value)
-    this.$watch('value', this.updateStruct)
+    this.inputData.parser = this.dataParser
+    this.innerValue = this.value
+    this.parser = new jsonParser({tree: this.tree})
+    this.$emit('input', demo)
   },
   beforeDestroy() {
   },
   mounted () {
   },
   methods: {
-    wsBeginCreated (self) {
-      self.$watch('cursor',(cursor) => {
-        if (self.cursor === self.value.length) {
-          self.$emit('cursorMove', {
-            delta:0, direction: 'right', stay: true, focus: true
-          })
+    dataParser (value) {
+      let parser = this.parser
+      if (!value.length) { // value is empty, not use parser
+        return {
+          cursor (cursor) {
+            return {extract: value, range: null}
+          },
+          complete (cursor, oldValue, newValue) {
+            return {value: newValue, cursor:cursor-oldValue.length + newValue.length}
+          },
+          result:null,
         }
-      })
-    },
-    wsEndCreated (self) {
-      self.$watch('cursor',(cursor) => {
-        if (self.cursor === 0) {
-          self.$emit('cursorMove', {
-            delta:0, direction: 'left', stay: true, focus: true
-          })
-        }
-      })
-    },
-    testFocus (value) {
-      return () => {
-        console.log(value)
-      }
-    },
-    cursorMove (ref, data) {
-      let {delta, deleting, direction} = data
-      if (ref === 'wsBegin') {
-        if (direction==='right'||delta>0) {
-          this.$refs.value.cursorMove({delta, focus: true, stay: true, direction})
-        }
-      } else if (ref === 'value') {
-        if (delta>0) {
-          if (this.struct.wsEnd.length) {
-            this.$refs.wsEnd.cursorMove({delta, focus: true, stay: true, deleting, direction})
-          }
-        } else {
-          if (this.struct.wsBegin.length) {
-            this.$refs.wsBegin.cursorMove({delta, focus: true, stay: true, deleting, direction})
+      } else { // use parser
+        let result
+        let error
+        try {
+          result = parser.parse(value)
+        } catch (e) {
+          error = e
+          return {
+            cursor (cursor) {
+              return {extract: value, range: null}
+            },
+            complete (cursor, oldValue, newValue) {
+              return {value: newValue, cursor:cursor-oldValue.length + newValue.length}
+            },
+            result:null,
+            error,
           }
         }
-      } else if (ref === 'wsEnd') {
-        if (direction==='left'||delta<0) {
-          this.$refs.value.cursorMove({delta, focus: true, deleting, stay: true, direction})
+        let state = {}
+        return {
+          cursor (cursor) {
+            let result = parser.analysis(cursor)
+            let {completeData, string, range} = result
+            Object.assign(state, result)
+            return {
+              extract: string,
+              range,
+              completeData,
+            }
+          },
+          complete (cursor, oldValue, newValue, cursorOffset) {
+            let offset = cursorOffset === undefined ? 0 : cursorOffset
+            let {start, end, complete} = state
+            if (complete === 'insert' && start !== end) {
+              let middle = start+1
+              start = end = middle
+            }
+            let head = oldValue.slice(0,start)
+            let tail = oldValue.slice(end)
+            let newFullValue = `${head}${newValue}${tail}`
+            return {value: newFullValue, cursor:start + newValue.length + offset}
+          },
+          result,
         }
-      }
-    },
-    updateStruct (string) {
-      let parsed = this.parse(string)
-      this.$set(this, 'struct', parsed)
-    },
-    parse (value) {
-      return jsonFilterParser.parse(value)
-    },
-    onws (data) {
-      console.log('onws:', data)
-      if (data.start) {
-        this.$refs.wsBegin.insertString(data.start, 'end')
       }
     }
   }
@@ -148,8 +175,8 @@ export default {
 $pre: ac-tree-filter-root;
 .#{$pre} {
   box-sizing: border-box;
-  border-style: solid;
-  border-width: thin;
+  //border-style: solid;
+  //border-width: thin;
   width: max-content;
   height: max-content;
   padding: 0;

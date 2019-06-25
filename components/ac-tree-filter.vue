@@ -18,6 +18,7 @@
       :filter="filter"
       :nodes="nodes"
       :tree="tree"
+      :rawdata="rawdata"
       @update="onupdate"
     />
     <ac-tree-filter-item v-if="status.adding"
@@ -27,6 +28,7 @@
       :filter-state="filterState"
       :filter="filter"
       :tree="tree"
+      :rawdata="rawdata"
       @update="onupdate"
     />
   </div>
@@ -48,6 +50,7 @@ export default {
     filter: {type: Array, required: true},
     filterState: {type: Object, required: true},
     tree: {type: Object, required: true},
+    rawdata: {type: Array, required: true},
   },
   data () {
     return {

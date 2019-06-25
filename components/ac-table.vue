@@ -119,6 +119,7 @@
             <ac-tree-filter
               v-show="store.status.sidebar==='filter'"
               ref="filter"
+              :rawdata="data"
               :tree="store.tree"
               :filter="store.filter"
               :filter-state="store.filterState"
@@ -363,6 +364,7 @@ export default {
         this.loading = false
         this.initStore()
       }
+      console.log(this.analyser)
     },
     // about database and init
     async saveStore (key, tx) {

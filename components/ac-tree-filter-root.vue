@@ -3,7 +3,7 @@
     <ac-input
       ref='value'
       v-model="innerValue"
-      placeholder=""
+      placeholder="filter"
       :data="inputData"
     />
   </span>
@@ -15,6 +15,7 @@ import structItem from './ac-tree-filter-struct-item'
 import jsonFilterParser from 'mongodb-simple-query-syntax/pegjs/json-filter.js'
 import _parser from 'mongodb-simple-query-syntax/json-filter.js'
 const {parse: jsonParse, Parser: jsonParser} = _parser
+import {JsonAnalyser} from '../utils/jsonAnalyser.js'
 
 /* operators and special keyString
  * special keys: @js, @and, @or, @not
@@ -48,7 +49,7 @@ let demo = `
   ] ||
   aN: [
     @array|len: "<3",
-    @array>|have: ">0"
+    @array>|any: ">0"
   ] ||
   aSNDAMO@array|len: ">5" ||
   aSNDAMO@array>|len: ">5" ||
@@ -74,12 +75,14 @@ export default {
   props: {
     value: {type: String, default: ''},
     tree:  {type: Object, required: true},
+    rawdata:  {type: Array, required: true},
   },
   data () {
     return {
       prefixCls,
       innerValue: '',
       parser: null,
+      treeAnalyser: null,
       inputData: {
         parser: null,
         data: []
@@ -101,7 +104,8 @@ export default {
   created() {
     this.inputData.parser = this.dataParser
     this.innerValue = this.value
-    this.parser = new jsonParser({tree: this.tree})
+    this.treeAnalyser = new JsonAnalyser({tree: this.tree, data: this.rawdata})
+    this.parser = new jsonParser({treeAnalyser: this.treeAnalyser})
     this.$emit('input', demo)
   },
   beforeDestroy() {

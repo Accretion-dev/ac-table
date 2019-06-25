@@ -16,8 +16,9 @@ function haveNull(array) {
 }
 
 class JsonAnalyser {
-  constructor({typeDelimiter, struct, tree, arrayDelimiter} = {}) {
+  constructor({typeDelimiter, struct, tree, arrayDelimiter, data} = {}) {
     this.tree = tree
+    this.data = data
     if (!typeDelimiter) {
       this.typeDelimiter = '@'
     } else {
@@ -71,6 +72,7 @@ class JsonAnalyser {
     let tree = JSON.parse(JSON.stringify(structTree))
     this._reanalysis(tree)
     this.tree = tree
+    this.data = data
     return {structTree, tree}
   }
   getType(data) {
@@ -429,7 +431,7 @@ class JsonAnalyser {
     }
     //console.log({paths, head, tail})
     //debugger
-    const goodTypes = ['array', 'object', 'string', 'number', 'date']
+    const goodTypes = ['array', 'object', 'string', 'number', 'date', 'null']
     if (head.startsWith(this.typeDelimiter)) {
       let type = head.slice(1)
       if (type === 'inner') {

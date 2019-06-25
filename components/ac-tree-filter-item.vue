@@ -28,6 +28,7 @@
           ref="content"
           v-model="data.content"
           :tree="tree"
+          :rawdata="rawdata"
         />
       </div>
     </div>
@@ -63,6 +64,7 @@ export default {
     filterState: {type: Object, required: true},
     filter: {type: Array, required: true},
     index: {type: Number, default: -1},
+    rawdata: {type: Array, required: true},
     nodes: { type: Object },
   },
   data () {

@@ -143,25 +143,25 @@ export default {
         return {
           cursor (cursor) {
             let result = parser.analysis(cursor)
-            let {completeData, string, range} = result
+            let {completeData, string, range, options, completeType} = result
             Object.assign(state, result)
             return {
               extract: string,
               range,
               completeData,
+              options,
             }
           },
-          complete (cursor, oldValue, newValue, cursorOffset) {
-            let offset = cursorOffset === undefined ? 0 : cursorOffset
-            let {start, end, complete} = state
-            if (complete === 'insert' && start !== end) {
-              let middle = start+1
-              start = end = middle
-            }
+          complete (cursor, oldValue, newValue, deltaCursor) {
+            let offset = deltaCursor === undefined ? 0 : deltaCursor
+            let {start, end} = state.range
             let head = oldValue.slice(0,start)
             let tail = oldValue.slice(end)
             let newFullValue = `${head}${newValue}${tail}`
-            return {value: newFullValue, cursor:start + newValue.length + offset}
+            let result = {value: newFullValue, cursor:start + newValue.length + offset}
+            console.log('complete:', {cursor, newValue, deltaCursor, start, end, len:newValue.length})
+            console.log('completeResult:', result)
+            return result
           },
           result,
         }

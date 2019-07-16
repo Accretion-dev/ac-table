@@ -173,7 +173,7 @@ export default {
         }
       } else {
         this.$nextTick(() => {
-          this.$refs[value].focus()
+          this.$refs[value].focus({ preventScroll: true })
         })
       }
     },
@@ -203,9 +203,9 @@ export default {
     },
     focus () {
       if (this.data.status.editing) {
-        this.$refs.name.focus()
+        this.$refs.name.focus({ preventScroll: true })
       } else {
-        this.$el.focus()
+        this.$el.focus({ preventScroll: true })
       }
     },
     dblclick () {

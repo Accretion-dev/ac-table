@@ -302,7 +302,7 @@ export default {
         this.$el.classList.remove(`${prefixCls}-selected`)
       }
       if (this.$refs.content) {
-        this.$refs.content.scrollIntoViewIfNeeded()
+        //this.$refs.content.scrollIntoViewIfNeeded()
       }
     },
     overBody (event) {

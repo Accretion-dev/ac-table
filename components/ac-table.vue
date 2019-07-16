@@ -324,7 +324,7 @@ export default {
   },
   created () {
     // watch for tab change
-    this.$watch('store.status.sidebar', this.focusOnSicebar)
+    this.$watch('store.status.sidebar', this.focusOnSidebar)
     /** TODO
     * when data or configs or projection changed(outside)
       update store
@@ -571,7 +571,7 @@ export default {
           event.stopPropagation()
           this.status.showSidebar=!this.status.showSidebar
           if (this.status.showSidebar) {
-            this.focusOnSicebar(this.store.status.sidebar)
+            this.focusOnSidebar(this.store.status.sidebar)
           } else {
             this.$el.focus()
           }
@@ -623,7 +623,7 @@ export default {
       }
     },
     // about show
-    focusOnSicebar (value) {
+    focusOnSidebar (value) {
       let el
       if (value==='tree') {
         el = this.$refs.tree&&this.$refs.tree.$el
@@ -636,7 +636,7 @@ export default {
       }
       if (el) {
         setTimeout(() => {
-          el.focus()
+          el.focus({ preventScroll: true })
         },0)
       }
     },

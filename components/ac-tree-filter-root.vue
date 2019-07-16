@@ -116,14 +116,22 @@ export default {
     dataParser (value) {
       let parser = this.parser
       if (!value.length) { // value is empty, not use parser
+        let result = parser.parse(value)
         return {
           cursor (cursor) {
-            return {extract: value, range: null}
+            let result = parser.analysis(null)
+            let {completeData, string, range, options, completeType} = result
+            return {
+              extract: string,
+              range,
+              completeData,
+              options,
+            }
           },
           complete (cursor, oldValue, newValue) {
             return {value: newValue, cursor:cursor-oldValue.length + newValue.length}
           },
-          result:null,
+          result,
         }
       } else { // use parser
         let result

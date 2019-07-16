@@ -691,6 +691,7 @@ export default {
         project.name = obj.name
         project.type = obj.type
         project.arrayType = obj.arrayType
+        if (project.js !== undefined) project.js = obj.js
       }
       // should be outside, in case you change newline of nested structure
       clearTimeout(this.timers.onProjectionChange)

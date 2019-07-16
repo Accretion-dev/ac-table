@@ -92,10 +92,10 @@ export default {
       if (this.status.adding) {
         this.newData = this.genNewData()
         setTimeout(() => {
-          this.$refs.adding.focus()
+          this.$refs.adding.focus({ preventScroll: true })
         },0)
       } else {
-        this.$el.focus()
+        this.$el.focus({ preventScroll: true })
       }
     },
     changeProjection (key, only) {
@@ -187,7 +187,7 @@ export default {
       if (change.modify) {
         setTimeout(() => {
           if (this.$el) {
-            this.$el.focus()
+            this.$el.focus({ preventScroll: true })
           }
         })
       }

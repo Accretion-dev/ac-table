@@ -53,7 +53,7 @@
              @mouseover="overBody"
              @mouseleave="leaveBody"
         />
-        <ac-tree-item
+        <ac-struct-item
           v-for="(child,thisindex) of tree.children"
           ref="subtrees"
           :key="child.path"
@@ -101,7 +101,7 @@
 </template>
 
 <script>
-const prefixCls = 'ac-table-tree-item'
+const prefixCls = 'ac-struct-item'
 import icons from '../icons/icons.vue'
 const typeMap = {
   'string': 'S',
@@ -116,7 +116,7 @@ const typeMap = {
 }
 
 export default {
-  name: 'ac-table-tree-item',
+  name: 'ac-struct-item',
   components: {icons},
   props: {
     tree: { type: Object, required: true },
@@ -176,7 +176,7 @@ export default {
     this.nodes[this.tree.path] = this
   },
   beforeCreate: function () {
-    this.$options.components.acTreeItem = require('./ac-tree-item.vue').default
+    this.$options.components.acStructItem = require('./ac-struct-item.vue').default
   },
   methods: {
     onlyUpdateFold (value) {
@@ -358,7 +358,7 @@ export default {
 </script>
 
 <style lang="scss">
-$pre: ac-table-tree-item;
+$pre: ac-struct-item;
 .#{$pre}-projection {
   color: green;
   font-weight: bolder;

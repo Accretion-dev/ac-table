@@ -18,24 +18,45 @@
     </div>
     <div :class="`${prefixCls}-header`">
       <span
-        :class="`${prefixCls}-toolbar`"
-        :style="{background: status.showSidebar?'#d8ffd7':'unset'}"
+        :class="`${prefixCls}-show-toolbar`"
         @click="status.showSidebar=!status.showSidebar"
       >
-        <icons name="list" size="1rem" />
+        <icons v-if="!status.showSidebar" name="double-angle-pointing-to-right" size="1rem" />
+        <icons v-if="status.showSidebar" name="double-left-chevron" size="1rem" />
       </span>
-      <div :class="`${prefixCls}-sidebar-tab`" @click="clickChangeSidebar">
-        <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
-          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">T</span>
+      <div :class="`${prefixCls}-sidebar-tab`" @click="clickChangeSidebar($event, 'mode')">
+        <span name="list" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.mode==='list'}">
+          <icons class="ac-unselectable" style="pointer-events:none;padding: 0 0.5rem;" name="numbered-list" size="1rem" />
         </span>
-        <span name="projection" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='projection'}">
-          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">P</span>
+        <span name="table" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.mode==='table'}">
+          <icons class="ac-unselectable" style="pointer-events:none;padding: 0 0.5rem;" name="table-grid" size="1rem" />
+        </span>
+        <span name="fold" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.mode==='fold'}">
+          <icons class="ac-unselectable" style="pointer-events:none;padding: 0 0.5rem;" name="tree-json" size="1rem" />
+        </span>
+      </div>
+      <div :class="`${prefixCls}-sidebar-tab`" style="border: solid; border-width: thin;" @click="clickChangeSidebar($event, 'sidebar')">
+        <span name="filter" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='filter'}">
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">F</span>
         </span>
         <span name="extraField" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='extraField'}">
           <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">E</span>
         </span>
-        <span name="filter" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='filter'}">
-          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">F</span>
+        <icons class="ac-unselectable" style="pointer-events:none;padding: 0 0 0 0.5rem;" name="numbered-list" size="1rem" />
+        :
+        <span name="struct" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='struct'}">
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">S</span>
+        </span>
+        <span name="projection" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='projection'}">
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">P</span>
+        </span>
+        <icons class="ac-unselectable" style="pointer-events:none;padding: 0 0 0 0.5rem;" name="table-grid" size="1rem" />
+        :
+        <span name="table-struct" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='table-struct'}">
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">S</span>
+        </span>
+        <span name="table-projection" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='table-projection'}">
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">P</span>
         </span>
       </div>
       <span @click="cleanCurrentDatabase">
@@ -61,20 +82,20 @@
     </div>
     <div style="position: relative;" v-if="status.showSettings">
       <div :class="`${prefixCls}-settings`" >
-        <div v-for="key of Object.keys(store.configs)" :key="key">
+        <div v-for="key of Object.keys(store.config)" :key="key">
           <span>{{key}}:</span>
           <div
-            v-for="subkey of Object.keys(store.configs[key])"
+            v-for="subkey of Object.keys(store.config[key])"
             :key="subkey"
             style="padding-left: 1rem; display:flex; align-items: center;"
           >
             <span>{{subkey}}:</span>
             <template v-if="defaultConfigs[key][subkey].type==='boolean'">
-              <input type="checkbox" v-model="store.configs[key][subkey]" />
+              <input type="checkbox" v-model="store.config[key][subkey]" />
             </template>
             <template v-else>
               <ac-input
-                v-model="store.configs[key][subkey]"
+                v-model="store.config[key][subkey]"
                 :type="defaultConfigs[key][subkey].type"
                 :focus-select-all-text="true"
                 :placeholder="defaultConfigs[key][subkey].type"
@@ -95,28 +116,44 @@
       <template v-else>
         <div v-show="status.showSidebar" ref="sidebar-wrapper" :class="`${prefixCls}-sidebar-wrapper`">
           <div ref="sidebar" :class="`${prefixCls}-sidebar`">
-            <ac-tree
-              v-show="store.status.sidebar==='tree'"
-              ref="tree"
+            <ac-struct
+              v-show="store.status.sidebar==='struct'"
+              ref="struct"
               :tree="store.tree"
               :tree-state="store.treeState"
               @update="onTreeUpdate"
             />
-            <ac-tree-projection
+            <ac-table-projection
               v-show="store.status.sidebar==='projection'"
               ref="projection"
               :projections="store.projection"
               :projectionState="store.projectionState"
               @update="onProjectionUpdate"
             />
-            <ac-tree-extra-field
+            <ac-struct
+              v-show="store.status.sidebar==='table-struct'"
+              prefix="table"
+              ref="table-struct"
+              :tree="store.tableTree"
+              :tree-state="store.tableTreeState"
+              @update="onTreeUpdate"
+            />
+            <ac-table-projection
+              v-show="store.status.sidebar==='table-projection'"
+              prefix="table"
+              ref="table-projection"
+              :projections="store.tableProjection"
+              :projectionState="store.tableProjectionState"
+              @update="onProjectionUpdate"
+            />
+            <ac-table-extra-field
               v-show="store.status.sidebar==='extraField'"
               ref="extraField"
               :extra-field="store.extraField"
               :extra-field-state="store.extraFieldState"
               @update="onExtraFieldUpdate"
             />
-            <ac-tree-filter
+            <ac-table-filter
               v-show="store.status.sidebar==='filter'"
               ref="filter"
               :rawdata="data"
@@ -135,12 +172,18 @@
           <span style="width:1px; background:gray; margin-right:2px;pointer-events: none;" />
         </div>
         <div :class="`${prefixCls}-content`">
-          <div v-for="(pdata,index) in pageStrings" :key="index" :class="`${prefixCls}-print-line`">
-            <span
-              :class="`${prefixCls}-print-index`"
-              :style="{width:`${digital}rem`,'flex-shrink':0}"
-            >{{ index+status.page.start }}</span>
-            <pre :class="`${prefixCls}-print-data`">{{ pdata }}</pre>
+          <div :class="`${prefixCls}-list-content`" v-show="store.status.mode==='list'">
+            <div v-for="(pdata,index) in pageStrings" :key="index" :class="`${prefixCls}-print-line`">
+              <span
+                :class="`${prefixCls}-print-index`"
+                :style="{width:`${digital}rem`,'flex-shrink':0}"
+              >{{ index+status.page.start }}</span>
+              <pre :class="`${prefixCls}-print-data`">{{ pdata }}</pre>
+            </div>
+          </div>
+          <div :class="`${prefixCls}-table-content`" v-show="store.status.mode==='table'">
+          </div>
+          <div :class="`${prefixCls}-fold-content`" v-show="store.status.mode==='fold'">
           </div>
         </div>
       </template>
@@ -163,10 +206,10 @@
 const prefixCls = 'ac-table'
 import {JsonAnalyser} from '../utils/jsonAnalyser.js'
 import { openDB, deleteDB, wrap, unwrap } from 'idb'
-import acTree from './ac-tree'
-import acTreeProjection from './ac-tree-projection'
-import acTreeExtraField from './ac-tree-extra-field'
-import acTreeFilter from './ac-tree-filter'
+import acStruct from './ac-struct'
+import acTableProjection from './ac-table-projection'
+import acTableExtraField from './ac-table-extra-field'
+import acTableFilter from './ac-table-filter'
 import icons from '../icons/icons.vue'
 
 /* TODO:
@@ -178,14 +221,16 @@ import icons from '../icons/icons.vue'
 
 export default {
   name: 'ac-table',
-  components: {acTree, acTreeProjection, acTreeExtraField, acTreeFilter, icons},
+  components: {acStruct, acTableProjection, acTableExtraField, acTableFilter, icons},
   props: {
     data: { type: Array, default () { return [] } },
-    configs: { type: Object, default: null },
-    structs: { type: Object, default: null },
-    extraFields: { type: Object, default: null },
-    filters: { type: Object, default: null },
-    projections: { type: Object, default: null },
+    config: { type: Object, default: null },
+    filter: { type: Object, default: null },
+    struct: { type: Object, default: null },
+    projection: { type: Object, default: null },
+    extraField: { type: Object, default: null },
+    tableStruct: { type: Object, default: null },
+    tableProjection: { type: Object, default: null },
     uid: { type: String, default () { return (new Date()).toISOString() }},
   },
   data () {
@@ -196,11 +241,15 @@ export default {
       analyser: null,
       filteredData: [],
       sortedData: [],
-      projectedData: {},
+      projectedData: {}, // in rows
       pageData: [],
       projectedStrings: [],
       pageStrings: [],
       store: {
+        filter: [],
+        filterState: {
+          selected: null,
+        },
         tree: {root: true, status:{open:true}},
         treeState: {
           selected: null,
@@ -214,14 +263,19 @@ export default {
         extraFieldState: {
           selected: null,
         },
-        filter: [],
-        filterState: {
+        tableTree: {root: true, status:{open:true}},
+        tableTreeState: {
+          selected: null,
+          comments: null,
+        },
+        tableProjection:[],
+        tableProjectionState: {
           selected: null,
         },
-        configs: {},
-        filters: {},
+        config: {},
         status: {
-          sidebar: 'tree',
+          mode: 'list',
+          sidebar: 'struct',
           page: 0,
           tablePage: 0,
         },
@@ -263,6 +317,14 @@ export default {
         page: {
           pageSize: { type: 'positive', default: 10 },
           tablePageSize: { type: 'positive', default: 100 },
+        },
+        tableProjection: {
+          showUndefined: { type: 'boolean', default: true, },
+          debounceDelay: { type: 'number', default: 500, },
+        },
+        tablePage: {
+          pageSize: { type: 'positive', default: 10 },
+          tablePageSize: { type: 'positive', default: 100 },
         }
       },
       validators: {
@@ -297,9 +359,6 @@ export default {
     masker () {
       return this.status.resizing
     },
-    actree () {
-      return this.$children.find(_ => _.$options.name === 'ac-table-tree')
-    },
     defaultProjection () {
       return this.tree.children.map(_ => _.path)
     },
@@ -327,29 +386,46 @@ export default {
   created () {
     // watch for tab change
     this.$watch('store.status.sidebar', this.focusOnSidebar)
-    /** TODO
-    * when data or configs or projection changed(outside)
-      update store
-    * when store.tree, store.projection, store.filters change(inside)
-      update database and the print
-    */
+    // watch for props change
     let dataChange = (newValue, oldValue) => {
       console.log('data changed!')
     }
-    let structsChange = (newValue, oldValue) => {
+    let configChange = (newValue, oldValue) => {
+      console.log('config changed!')
+      this.store.config = newValue
+    }
+    let filterChange = (newValue, oldValue) => {
+      console.log('filter changed!')
+      this.store.filter = newValue
+    }
+
+    let structChange = (newValue, oldValue) => {
       console.log('structs changed!')
       this.analyser = new JsonAnalyser({tree: value})
     }
-    let filtersChange = (newValue, oldValue) => {
-      this.store.filters = newValue
+    let projectionChange = (newValue, oldValue) => {
+      console.log('projections changed!')
     }
-    let configsChange = (newValue, oldValue) => {
-      this.store.configs = newValue
+    let extraFieldChange = (newValue, oldValue) => {
+      console.log('extraFields changed!')
     }
+    let tableStructChange = (newValue, oldValue) => {
+      console.log('table structs changed!')
+      this.analyser = new JsonAnalyser({tree: value})
+    }
+    let tableProjectionChange = (newValue, oldValue) => {
+      console.log('table projections changed!')
+    }
+
     this.$watch('data', dataChange)
-    this.$watch('structs',  structsChange)
-    this.$watch('filters', filtersChange)
-    this.$watch('configs', configsChange, {deep: true})
+    this.$watch('config', configChange, {deep: true})
+    this.$watch('filter', filterChange)
+
+    this.$watch('struct',  structChange)
+    this.$watch('projection',  projectionChange)
+    this.$watch('extraField',  extraFieldChange)
+    this.$watch('tableStruct',  tableStructChange)
+    this.$watch('tableProjection',  tableProjectionChange)
     //this.$watch('store.configs', this.onConfigChange, {deep: true})
     this.init()
   },
@@ -363,7 +439,7 @@ export default {
       } catch (error) {
         console.error(error)
         this.loading = false
-        this.initStore()
+        this.updateStore({init: true})
       }
     },
     // about database and init
@@ -371,7 +447,7 @@ export default {
       let keys
       if (key) {
         keys = [key]
-      } else {
+      } else { // save all
         keys = Object.keys(this.store)
         await tx.objectStore('uids').put(this.uid, this.uid)
       }
@@ -380,6 +456,7 @@ export default {
       }
     },
     getConfigs (config) {
+      // update config only to level 2 depth
       let result = {}
       for (let key of Object.keys(this.defaultConfigs)) {
         result[key] = {}
@@ -396,11 +473,10 @@ export default {
     async initDatabase (initial = {}) {
       if (!window.indexedDB) {
         throw Error('no support for indexedDB')
-      } else {
+      } else { // client support indexedDB
         let keys = Object.keys(this.store) // get all keys from default
         let db = await openDB('ac-table', 1, {
           upgrade (db, oldVersion, newVersion, transaction) {
-            //db.createObjectStore('trees', { keyPath: 'uid' })
             db.createObjectStore('uids')
             for (let key of keys) {
               db.createObjectStore(key)
@@ -415,7 +491,7 @@ export default {
         if (!uid) { // init the store
           // tree, treeState, extraFields, projection, configs, status
           this.statusBarInfo(`gen new store`, 'info')
-          this.initStore()
+          this.updateStore({init: true, uid})
           await this.saveStore(null, tx)
         } else {
           this.statusBarInfo(`use old store`, 'info')
@@ -425,6 +501,8 @@ export default {
           }
           this.analyser = new JsonAnalyser({tree: data.tree})
           Object.assign(this.store, data)
+          this.updateStore({init: true, uid})
+          await this.saveStore(null, tx)
         }
         // clean old trees
         let uids = await uidsStore.getAllKeys('uids')
@@ -485,58 +563,16 @@ export default {
       await tx.done
       console.log('clean all database')
     },
-    initStore () {
-      this.setStoreTree()
-      this.setStoreConfigs()
-      this.setStoreFilters()
+    updateStore ({init, uid}) {
+      this.setStore({key: 'config', value: this.config, init: true})
+      this.setStore({key: 'filter', value: this.filter, init: true})
+      this.setStore({key: 'projection', value: this.projection, init: true})
+      this.setStore({key: 'tableProjection', value: this.tableProjection, init: true})
+      this.setStore({key: 'extraField', value: this.extraField, init: true})
+      this.setStoreTree({init, uid, value: this.struct})
+      this.setStoreTableTree({init, uid, value: this.tableStruct})
     },
-    setStoreExtraFields (value) {
-      if (value) {
-        this.store.extraField = value
-      } else {
-        this.store.extraField = this.extraField
-      }
-    },
-    setStorefilters (value) {
-      if (value) {
-        this.store.filter = value
-      } else {
-        this.store.filter = this.filter
-      }
-    },
-    setStoreProjections (value) {
-      if (value) {
-        this.store.projection = value
-      } else {
-        this.store.projection = this.projection
-      }
-    },
-    setStoreFilters (filters) {
-      if (filters) {
-        this.store.filters = filters
-      } else {
-        this.store.filters = this.filters
-      }
-    },
-    setStoreConfigs (configs) {
-      if (configs) {
-        this.store.configs = configs
-      } else {
-        this.store.configs = this.getConfigs(this.configs)
-      }
-    },
-    setStoreTree (tree) {
-      if (tree) {
-        this.analyser = new JsonAnalyser({tree})
-        this.store.tree = tree
-      } else if (this.structs) {
-        this.analyser = new JsonAnalyser({tree: this.structs})
-        this.store.tree = this.structs
-      } else {
-        this.store.tree = this.genTree(this.data)
-      }
-    },
-    genTree (data) {
+    genTree (data, init) {
       this.analyser = new JsonAnalyser()
       let {structTree, tree} = this.analyser.analysis(data)
       this.goThrough(tree, _ => {
@@ -559,10 +595,77 @@ export default {
           })
         }
       })
-      this.addProjection(tree.children[0])
       tree.status.open = true
       return tree
     },
+    setStoreTree({value, uid, init}) {
+      if (init) {
+        if (uid) {
+          if (value) { // use prop value
+            this.analyser = new JsonAnalyser({tree:value})
+            this.store.tree = value
+          } else { // use old value
+          }
+        } else { // totally clean database, generate all
+          this.store.tree = this.genTree(this.data)
+          this.store.tableTree = JSON.parse(JSON.stringify(this.store.tree))
+          this.addProjection(this.store.tree.children[0])
+          for (let child of this.store.tableTree.children) {
+            this.addProjection(child, 'table')
+          }
+        }
+      } else if (value) {
+        this.analyser = new JsonAnalyser({tree:value})
+        this.store.tree = value
+      } else { // struct set to null, recalculate
+        this.store.tree = this.genTree(this.data)
+      }
+    },
+    setStoreTableTree({value, uid, init}) {
+      if (init) {
+        if (uid) {
+          if (value) { // use prop value
+            this.analyser = new JsonAnalyser({tree:value}) // deplicated
+            this.store.tableTree = value
+          } else { // use old value
+          }
+        } else { // totally clean database, generate all
+          // done in setStoreTree
+        }
+      } else if (value) {
+        this.analyser = new JsonAnalyser({tree:value})
+        this.store.tableTree = value
+      } else { // struct set to null, recalculate
+        this.store.tableTree = this.genTree(this.data)
+      }
+    },
+    setStore ({key, value, init}) {
+      let getValue = (key, value) => {
+        if (key === 'config') {
+          return this.getConfigs(value)
+        } else if (key === 'tree') {
+          if (value) {
+            this.analyser = new JsonAnalyser({tree:value})
+            this.store.tree = value
+          } else {
+            this.store.tree = this.genTree(this.data)
+          }
+          return this.store.tree
+        } else {
+          return value
+        }
+      }
+      if (init) {
+        let result = getValue(key, value)
+        if (result) {
+          this.store[key] = result
+        }
+      } else if (value) {
+        this.store[key] = getValue(key, value) // key change to not-null
+      }
+      // TODO, update related keys (e.g. update treeState if projection change)
+    },
+    //=================
     // keyboard
     keydown (event) {
       switch (event.key) {
@@ -598,7 +701,7 @@ export default {
       }
     },
     switchTab (value) {
-      let tabs = ['tree', 'projection', 'extraField', 'filter']
+      let tabs = ['filter', 'extraField', 'struct', 'projection', 'table-struct', 'table-projection']
       let cIndex = tabs.findIndex(_ => _===this.store.status.sidebar)
       let nIndex = (cIndex + tabs.length + value) % tabs.length
       this.store.status.sidebar = tabs[nIndex]
@@ -625,10 +728,14 @@ export default {
     // about show
     focusOnSidebar (value) {
       let el
-      if (value==='tree') {
-        el = this.$refs.tree&&this.$refs.tree.$el
+      if (value==='struct') {
+        el = this.$refs.struct&&this.$refs.struct.$el
       } else if (value==='projection') {
         el = this.$refs.projection&&this.$refs.projection.$el
+      } else if (value==='table-struct') {
+        el = this.$refs['table-struct']&&this.$refs['table-struct'].$el
+      } else if (value==='table-projection') {
+        el = this.$refs['table-projection']&&this.$refs['table-projection'].$el
       } else if (value==='extraField') {
         el = this.$refs.extraField&&this.$refs.extraField.$el
       } else if (value==='filter') {
@@ -640,10 +747,26 @@ export default {
         },0)
       }
     },
-    addProjection (tree) {
-      let exists = this.store.projection.find(_ => _.path===tree.path && _.extraField===tree.extraField)
-      tree.status.projection = true
-      if (exists) return
+    addProjection (tree, prefix) {
+      let key = prefix?'tableProjection':'projection'
+      let exists = this.store[key].find(_ => _.path===tree.path && _.extraField===tree.extraField)
+      if (tree.extraField) {
+        if (prefix) {
+          tree.status.tableProjection = true
+        } else {
+          tree.status.projection = true
+        }
+      } else {
+        tree.status.projection = true
+      }
+      if (exists) {
+        if (exists.extraField) {
+          tree.status[key] = true
+        } else {
+          tree.status.projection = true
+        }
+        return
+      }
       let toAdd = {
         name: tree.name,
         path: tree.path, // uid for extraFields
@@ -659,126 +782,184 @@ export default {
           noProFirstNewline: tree.status&&tree.status.noProFirstNewline,
         },
       }
-      this.store.projection.push(toAdd)
+      this.store[key].push(toAdd)
     },
-    removeProjection (obj) {
-      let index = this.store.projection.findIndex(_ => _===obj)
-      let tree
-      if (obj.extraField) {
-        tree = this.store.extraField.find(_ => _.path === obj.path)
+    removeProjection (obj, prefix) {
+      let todos
+      if (prefix === 'both') {
+        todos = ['projection', 'tableProjection']
       } else {
-        tree = this.$refs.tree.nodes[obj.path].tree
+        todos = [prefix?'tableProjection':'projection']
       }
-      if (tree) {
-        tree.status.projection = false
-      }
-      this.store.projection.splice(index, 1)
-    },
-    updateProjectionStatus (obj) {
-      //let tree = this.$refs.tree.nodes[obj.path].tree
-      //let status = obj.status
-      //tree.updateNewline(status)
-      let project = this.store.projection.find(_ => _.path===obj.path&&!!_.extraField===!!obj.extraField)
-      if (project) {
-        let noFirstNewline = obj.status.noFirstNewline
-        let noNewline = obj.status.noNewline
-        let noProFirstNewline = obj.status.noProFirstNewline
-        let noProNewline = obj.status.noProNewline
-        project.status.noFirstNewline = noFirstNewline
-        project.status.noNewline = noNewline
-        project.status.noProFirstNewline = noProFirstNewline
-        project.status.noProNewline = noProNewline
-        project.name = obj.name
-        project.type = obj.type
-        project.arrayType = obj.arrayType
-        if (project.js !== undefined) project.js = obj.js
-      }
-      // should be outside, in case you change newline of nested structure
-      clearTimeout(this.timers.onProjectionChange)
-      this.timers.onProjectionChange = setTimeout(() => {
-        this.onProjectionChange(this.store.projection, this.store.projection)
-      }, this.store.configs.projection.debounceDelay)
-      this.updateDatabase(['projection'])
-    },
-    // others
-    cleanProjection () {
-      for (let each of this.store.projection) {
-        if (!each.extraField) { // clean tree
-          let path = each.path
-          let node = this.$refs.tree.nodes[path]
-          if (node) {
-            node.tree.status.projection = false
-          }
-        } else { // clean extraField
-          let path = each.path
-          let node = this.$refs.extraField.nodes[path]
-          if (node) {
-            node.data.status.projection = false
+      for (let pkey of todos) {
+        let index = this.store[pkey].findIndex(_ => _===obj)
+        let tree
+        if (obj.extraField) {
+          tree = this.store.extraField.find(_ => _.path === obj.path)
+        } else {
+          let struct = pkey.startsWith('table')?'table-struct':'struct'
+          tree = this.$refs[struct].nodes[obj.path].tree
+        }
+        if (tree) {
+          if (obj.extraField) {
+            tree.status[pkey] = false
+          } else {
+            tree.status.projection = false
           }
         }
+        this.store[pkey].splice(index, 1)
+        let lastProject = this.store[pkey][index]
+        let projectionKey = pkey.startsWith('table')?'table-projection':'projection'
+        let projectionStateKey = pkey.startsWith('table')?'tableProjectionState':'projectionState'
+        if (lastProject) {
+          let key = this.$refs[projectionKey].getKey(lastProject)
+          this.store[projectionStateKey].selected = key
+          this.$refs[projectionKey].setSelected(key, true)
+        }
       }
-      this.store.projection = []
+    },
+    updateProjectionStatus (obj, prefix) {
+      let todos
+      if (prefix === 'both') {
+        todos = [this.store.projection, this.store.tableProjection]
+      } else {
+        todos = [this.store[prefix?'tableProjection':'projection']]
+      }
+      for (let thisprojection of todos) {
+        let project = thisprojection.find(_ => _.path===obj.path&&!!_.extraField===!!obj.extraField)
+        if (project) {
+          let noFirstNewline = obj.status.noFirstNewline
+          let noNewline = obj.status.noNewline
+          let noProFirstNewline = obj.status.noProFirstNewline
+          let noProNewline = obj.status.noProNewline
+          project.status.noFirstNewline = noFirstNewline
+          project.status.noNewline = noNewline
+          project.status.noProFirstNewline = noProFirstNewline
+          project.status.noProNewline = noProNewline
+          project.name = obj.name
+          project.type = obj.type
+          project.arrayType = obj.arrayType
+          if (project.js !== undefined) project.js = obj.js
+        }
+      }
+      if (prefix === 'both' || !prefix) { // update table
+        clearTimeout(this.timers.onProjectionChange)
+        this.timers.onProjectionChange = setTimeout(() => {
+          this.onProjectionChange(this.store.projection, this.store.projection)
+        }, this.store.config.projection.debounceDelay)
+        this.updateDatabase(['projection'])
+      } else { // update table
+        this.updateDatabase(['tableProjection'])
+
+      }
+    },
+    // others
+    cleanProjection (prefix) {
+      let todos
+      if (prefix === 'both') {
+        todos = ['projection', 'tableProjection']
+      } else {
+        todos = [prefix?'tableProjection':'projection']
+      }
+      for (let pkey of todos) {
+        for (let each of this.store[pkey]) {
+          if (!each.extraField) { // clean tree
+            let path = each.path
+            let struct = pkey.startsWith('table')?'table-struct':'struct'
+            let node = this.$refs[struct].nodes[path]
+            if (node) {
+              node.tree.status.projection = false // not extra field, use projection
+            }
+          } else { // clean extraField
+            let path = each.path
+            let node = this.$refs.extraField.nodes[path]
+            if (node) {
+              node.data.status[pkey] = false // extra field, use pkey
+            }
+          }
+        }
+        this.store[pkey] = []
+      }
     },
     onTreeUpdate (change, value, origin) {
-      if (change&&change.storeUpdate) {
+      if (change&&change.storeUpdate) { // for changeSelect
         this.updateDatabase(change.storeUpdate)
       } else if (change&&change.status&&change.status.projection!==undefined) {
+        let prefix = change.prefix
         if (change.status.only) {
-          this.cleanProjection()
-          this.addProjection(origin.tree)
+          this.cleanProjection(prefix)
+          this.addProjection(origin.tree, prefix)
         } else if (change.status.projection) {
-          this.addProjection(origin.tree)
+          this.addProjection(origin.tree, prefix)
         } else {
-          let obj = this.store.projection.find(_ => _.path===origin.tree.path && !_.extraField)
+          let thisprojection = prefix?this.store.tableProjection:this.store.projection
+          let obj = thisprojection.find(_ => _.path===origin.tree.path && !_.extraField)
           if (obj) {
-            this.removeProjection(obj)
+            this.removeProjection(obj, prefix)
           } else {
             origin.tree.status.projection = false
           }
         }
-        this.updateDatabase(['tree'])
-        this.updateProjectionStatus(origin.tree)
+        this.updateDatabase([prefix?'tableTree':'tree'])
+        this.updateProjectionStatus(origin.tree, prefix)
       } else if (change&&change.status&&change.status.newline) { // update newline
-        this.updateDatabase(['tree'])
-        this.updateProjectionStatus(origin.tree)
+        let prefix = change.prefix
+        this.updateDatabase([prefix?'tableTree':'tree'])
+        this.updateProjectionStatus(origin.tree, prefix)
       } else if (change&&change.goToProjection) { // update newline
+        let prefix = change.prefix
+        let thisprojection = prefix?this.store.tableProjection:this.store.projection
         let go = change.goToProjection
-        let project = this.store.projection.find(_ => _.path===go.path&&!!_.extraField===false)
+        let project = thisprojection.find(_ => _.path===go.path&&!!_.extraField===false)
         if (project) {
-          this.store.status.sidebar = 'projection'
-          this.$refs.projection.changeSelect(project)
+          this.store.status.sidebar = prefix?'table-projection':'projection'
+          this.$refs[prefix?'table-projection':'projection'].changeSelect(project)
           this.updateDatabase(['status'])
         }
       } else { // update selected
-        this.updateDatabase(['tree', 'treeState'])
+        let prefix = change.prefix
+        this.updateDatabase(prefix?['tableTree', 'tableTreeState']:['tree', 'treeState'])
       }
       if (change&&change.changeSelect) {
-        clearTimeout(this.timers.treeComments)
-        let selected = this.store.treeState.selected
-        selected = this.actree.nodes[selected]
-        this.store.treeState.comments = {y:selected.$el.getBoundingClientRect().y, comments: selected.comments}
-        this.timers.treeComments = setTimeout(() => {
-          this.store.treeState.comments = null
-        }, this.store.configs.projection.debounceDelay)
+        let prefix = change.prefix
+        let thistimer = this.timers[prefix?"tableTreeComments":"treeComments"]
+        let state = this.store[prefix?"tableTreeState":"treeState"]
+        let struct = this.$refs[prefix?'table-struct':'struct']
+
+        clearTimeout(thistimer)
+        let selected = state.selected
+        selected = struct.nodes[selected]
+        state.comments = {y:selected.$el.getBoundingClientRect().y, comments: selected.comments}
+        this.timers[prefix?"tableTreeComments":"treeComments"] = setTimeout(() => {
+          state.comments = null
+        }, this.store.config.projection.debounceDelay)
       }
     },
     onProjectionUpdate (change) {
+      let prefix = change.prefix
       if (change.changeShow||change.reorder) {
-        this.updateDatabase(['projectionState'])
-        this.updateDatabase(['projection'])
-        clearTimeout(this.timers.onProjectionChange)
-        this.timers.onProjectionChange = setTimeout(() => {
-          this.onProjectionChange(this.store.projection, this.store.projection)
-        }, 500)
+        this.updateDatabase([prefix?'tableProjectionState':'projectionState'])
+        this.updateDatabase([prefix?'tableProjection':'projection'])
+        if (prefix) { // update table
+        } else { // update list print
+          clearTimeout(this.timers.onProjectionChange)
+          this.timers.onProjectionChange = setTimeout(() => {
+            this.onProjectionChange(this.store.projection, this.store.projection)
+          }, 500)
+        }
       }
       if (change.deleteProjection) {
-        this.updateDatabase(['projectionState'])
-        this.removeProjection(change.deleteProjection)
-        this.updateDatabase(['tree', 'projection'])
-        clearTimeout(this.timers.onProjectionChange)
-        this.timers.onProjectionChange = setTimeout(() => {
-          this.onProjectionChange(this.store.projection, this.store.projection)
-        }, 500)
+        this.updateDatabase([prefix?"tableProjectionState":'projectionState'])
+        this.removeProjection(change.deleteProjection, prefix)
+        this.updateDatabase(prefix?['tableTree', 'tableProjection']:['tree', 'projection'])
+        if (prefix) { // update table
+
+        } else { // update list print
+          clearTimeout(this.timers.onProjectionChange)
+          this.timers.onProjectionChange = setTimeout(() => {
+            this.onProjectionChange(this.store.projection, this.store.projection)
+          }, 500)
+        }
       }
       if (change.goToOrigin) {
         let data = change.goToOrigin
@@ -789,12 +970,21 @@ export default {
             extraField.select()
             this.updateDatabase(['status'])
           }
-        } else { // goto tree
-          let tree = this.$refs.tree.nodes[data.path]
-          if (tree) {
-            this.store.status.sidebar = 'tree'
-            tree.select()
-            this.updateDatabase(['status'])
+        } else { // goto struct
+          if (prefix) {
+            let tree = this.$refs['table-struct'].nodes[data.path]
+            if (tree) {
+              this.store.status.sidebar = 'table-struct'
+              tree.select()
+              this.updateDatabase(['status'])
+            }
+          } else {
+            let tree = this.$refs.struct.nodes[data.path]
+            if (tree) {
+              this.store.status.sidebar = 'struct'
+              tree.select()
+              this.updateDatabase(['status'])
+            }
           }
         }
       }
@@ -823,48 +1013,58 @@ export default {
       }
       if (change.modify) {
         this.updateDatabase(['extraField'])
-        this.updateProjectionStatus(change.modify)
+        this.updateProjectionStatus(change.modify, 'both')
       }
       if (change.changeShow||change.reorder) {
         this.updateDatabase(['extraField'])
       }
       if (change.deleted) {
-        this.removeProjection(change.deleted)
+        this.removeProjection(change.deleted, 'both')
         let index = this.store.extraField.findIndex(_ => _===change.deleted)
         if (index !== -1) {
           this.store.extraField.splice(index, 1)
         }
         this.updateDatabase(['extraField'])
         this.updateDatabase(['extraFieldState'])
-        this.updateProjectionStatus(change.deleted)
+        this.updateProjectionStatus(change.deleted, 'both')
       }
       if (change.status&&change.status.newline) {
         this.updateDatabase(['extraField'])
-        this.updateProjectionStatus(origin.data)
+        this.updateProjectionStatus(origin.data, 'both')
       }
       if (change.status&&change.status.projection!==undefined) {
+        let prefix = change.prefix
+        console.log('change:', change)
         if (change.status.only) {
-          this.cleanProjection()
-          this.addProjection(origin.data)
+          this.cleanProjection(prefix)
+          this.addProjection(origin.data, prefix)
         } else if (change.status.projection) {
-          this.addProjection(origin.data)
+          this.addProjection(origin.data, prefix)
         } else {
-          let obj = this.store.projection.find(_ => _.path===origin.data.path)
+          let obj = this.store[prefix?'tableProjection':'projection'].find(_ => _.path===origin.data.path)
           if (obj) {
-            this.removeProjection(obj)
+            this.removeProjection(obj, prefix)
           } else {
-            origin.data.status.projection = false
+            origin.data.status[prefix?'tableProjection':'projection'] = false
           }
         }
-        this.updateDatabase(['tree'])
-        this.updateProjectionStatus(origin.data)
+        this.updateDatabase([prefix?'tableTree':'tree'])
+        this.updateDatabase(['extraField', 'extraFieldState'])
+        this.updateProjectionStatus(origin.data, prefix)
       }
       if (change.goToProjection) { // update newline
+        let prefix = change.prefix
         let go = change.goToProjection
-        let project = this.store.projection.find(_ => _.path===go.path&&_.extraField)
+        let project
+        if (prefix) {
+          project = this.store.tableProjection.find(_ => _.path===go.path&&_.extraField)
+        } else {
+          project = this.store.projection.find(_ => _.path===go.path&&_.extraField)
+        }
         if (project) {
-          this.store.status.sidebar = 'projection'
-          this.$refs.projection.changeSelect(project)
+          let ref = prefix?'table-projection':'projection'
+          this.store.status.sidebar = ref
+          this.$refs[ref].changeSelect(project)
           this.updateDatabase(['status'])
         }
       }
@@ -882,7 +1082,6 @@ export default {
         this.updateDatabase(['filter'])
       }
       if (change.deleted) {
-        this.removeProjection(change.deleted)
         let index = this.store.filter.findIndex(_ => _===change.deleted)
         if (index !== -1) {
           this.store.filter.splice(index, 1)
@@ -899,10 +1098,17 @@ export default {
         }
       }
     },
-    clickChangeSidebar (event) {
+    clickChangeSidebar (event, type) {
       let target = event.target
-      this.store.status.sidebar = target.getAttribute('name')
-      this.updateDatabase(['status'])
+      let name = target.getAttribute('name')
+      if (name) {
+        if (type === 'sidebar') {
+          this.store.status.sidebar = name
+        } else if (type === 'mode') {
+          this.store.status.mode = name
+        }
+        this.updateDatabase(['status'])
+      }
     },
     statusBarInfo (text, type, timeout) {
       if (!timeout) timeout = 3000
@@ -941,11 +1147,11 @@ export default {
     },
     // about filter and projection
     onConfigChange (newValue, oldValue) {
-      this.updateDatabase(['configs'])
-      this.onFilterChange(this.store.filters)
+      this.updateDatabase(['config'])
+      this.onFilterChange(this.store.filter)
     },
     onDataChange (newValue, oldValue) {
-      this.onFilterChange(this.store.filters)
+      this.onFilterChange(this.store.filter)
     },
     onFilterChange (newValue, oldValue, init) {
       let filteredData = this.data
@@ -981,13 +1187,13 @@ export default {
       if (this.store.projection.length===0) { // no fields
         this.projectedStrings = []
       } else {
-        let result = this.prettyPrint(this.sortedData, this.store.projection, this.store.tree, this.store.configs)
+        let result = this.prettyPrint(this.sortedData, this.store.projection, this.store.tree, this.store.config)
         this.projectedStrings = result
       }
       this.onPageChange(this.store.status.page)
     },
     onPageChange (newValue, oldValue) {
-      let pageSize = this.store.configs.page.pageSize
+      let pageSize = this.store.config.page.pageSize
       let length = this.projectedStrings.length
       let maxPage = Math.floor(length / pageSize)
       let start = pageSize*newValue
@@ -998,7 +1204,7 @@ export default {
         maxPage, length, start, end, page: newValue
       }
     },
-    _prettyPrint (data, tree, level, configs) {
+    _prettyPrint (data, tree, level, config) {
       let type = this.analyser.getType(data)
       let prefix0 = [...Array(2*level).keys()].map(_ => ' ').join('')
       let prefix1 = [...Array(2*(level+1)).keys()].map(_ => ' ').join('')
@@ -1010,7 +1216,7 @@ export default {
         tree = tree.children.find(_ => _.type === type)
       }
       if (data===undefined) {
-        if (this.store.configs.projection.showUndefined) {
+        if (this.store.config.projection.showUndefined) {
           if (tree&&tree.status&&tree.status.noNewline) {
             return `${data}, `
           } else {
@@ -1038,9 +1244,9 @@ export default {
           } else {
             name = thistree.name
             thisdata = data[name]
-            thisresult = this._prettyPrint(thisdata, thistree, level+1, configs)
+            thisresult = this._prettyPrint(thisdata, thistree, level+1, config)
           }
-          if (configs.projection.showUndefined || thisresult !== undefined) {
+          if (config.projection.showUndefined || thisresult !== undefined) {
             term.push(`${name}: ${thisresult}`)
           }
         }
@@ -1057,11 +1263,11 @@ export default {
         for (let eachdata of data) {
           let thisresult
           if (tree.children) {
-            thisresult = this._prettyPrint(eachdata, tree.children[0], level+1, configs)
+            thisresult = this._prettyPrint(eachdata, tree.children[0], level+1, config)
           } else {
-            thisresult = this._prettyPrint(eachdata, tree, level+1, configs)
+            thisresult = this._prettyPrint(eachdata, tree, level+1, config)
           }
-          if (this.store.configs.projection.showUndefined || thisresult !== undefined) {
+          if (this.store.config.projection.showUndefined || thisresult !== undefined) {
             term.push(thisresult)
           }
         }
@@ -1084,7 +1290,7 @@ export default {
         } else {
           result = JSON.stringify(data)
         }
-        if (this.store.configs.projection.showUndefined || result !== undefined) {
+        if (this.store.config.projection.showUndefined || result !== undefined) {
           if (!tree.status.noNewline) {
             return `${result},\n${prefix0}`
           } else {
@@ -1095,7 +1301,7 @@ export default {
         }
       }
     },
-    prettyPrint (data, projections, tree, configs) {
+    prettyPrint (data, projections, tree, config) {
       let plen = projections.length
       let term
       let result = []
@@ -1130,7 +1336,7 @@ export default {
             } else {
               thattree = thistree
             }
-            thisresult = this._prettyPrint(thisdata, thattree, 1, configs)
+            thisresult = this._prettyPrint(thisdata, thattree, 1, config)
             showName = projection.path
           } else { // extra fields
             if (projection.js) {
@@ -1178,7 +1384,7 @@ export default {
             }
             showName = projection.name
           }
-          if (configs.projection.showUndefined || thisresult !== undefined) {
+          if (config.projection.showUndefined || thisresult !== undefined) {
             let toPush = `${showName}: ${thisresult}`
             if (thisresult===undefined) {
               toPush = toPush + ',\n  '
@@ -1218,7 +1424,7 @@ $fontFamily: "'Courier New', Courier, monospace";
   background: #d8ffd7;
   z-index: 99;
 }
-.#{$pre}-toolbar {
+.#{$pre}-show-toolbar {
   padding: 0 0.5rem;
   align-items: center;
   display: flex;
@@ -1288,11 +1494,19 @@ $fontFamily: "'Courier New', Courier, monospace";
 .#{$pre}-sidebar-tab span{
   flex: 1;
   text-align: center;
+  display: inline-flex;
 }
 .#{$pre}-sidebar-tab span:hover{
   background: #d8ffd7;
 }
 .#{$pre}-content {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: overlay;
+  flex: 1;
+}
+.#{$pre}-list-content {
   display: flex;
   flex-direction: column;
   position: relative;

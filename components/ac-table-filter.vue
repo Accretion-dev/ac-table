@@ -4,13 +4,14 @@
     tabindex="0"
     @keydown="keydown"
   >
+    <b>Filters</b>
     <div :class="`${prefixCls}-tool-bar`">
       <span
         :class="`${prefixCls}-tools-button`"
         @click="clickAdd"
       > + </span>
     </div>
-    <ac-tree-filter-item v-for="(thisdata, index) of filter"
+    <ac-table-filter-item v-for="(thisdata, index) of filter"
       :key="thisdata.path"
       :data="thisdata"
       :index="index"
@@ -21,7 +22,7 @@
       :rawdata="rawdata"
       @update="onupdate"
     />
-    <ac-tree-filter-item v-if="status.adding"
+    <ac-table-filter-item v-if="status.adding"
       ref="adding"
       key="adding"
       :data="newData"
@@ -36,16 +37,16 @@
 
 <script>
 /* comments:
- * do not use data.name as key in ac-tree-extra-field-item
+ * do not use data.name as key in ac-table-extra-field-item
  *   because every time you change data.name, will redraw this component, cause update bugs
 */
 
-const prefixCls = 'ac-tree-filter'
-import acTreeFilterItem from './ac-tree-filter-item'
+const prefixCls = 'ac-table-filter'
+import acTableFilterItem from './ac-table-filter-item'
 
 export default {
-  name: 'ac-tree-filter',
-  components: {acTreeFilterItem},
+  name: 'ac-table-filter',
+  components: {acTableFilterItem},
   props: {
     filter: {type: Array, required: true},
     filterState: {type: Object, required: true},
@@ -274,7 +275,7 @@ export default {
 </script>
 
 <style lang="scss">
-$pre: ac-tree-filter;
+$pre: ac-table-filter;
 .#{$pre} {
   outline:none;
   flex: 1;

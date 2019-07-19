@@ -20,30 +20,71 @@
           v-model="data.name"
           :focus-select-all-text="true"
           placeholder="name"
-          @report="onreport('content')"
+          @report="onreport('type')"
         />
       </div>
       <div :class="`${this.prefixCls}-form-line`">
-        <ac-tree-filter-input
-          ref="content"
-          v-model="data.content"
-          :tree="tree"
-          :rawdata="rawdata"
+        <b> type: </b>
+        <ac-input
+          ref="type"
+          v-model="data.type"
+          :focus-select-all-text="true"
+          placeholder="type"
+          droptype="select"
+          :data="typeLists"
+          @report="onreport(data.type==='array'?'arrayType':'js')"
+        />
+      </div>
+      <div :class="`${this.prefixCls}-form-line`" v-if="data.type==='array'">
+        <b> arrayType: </b>
+        <ac-input
+          ref="arrayType"
+          v-model="data.arrayType"
+          :focus-select-all-text="true"
+          placeholder="arrayType"
+          :data="typeLists"
+          @report="onreport('js')"
+        />
+      </div>
+      <div :class="`${this.prefixCls}-form-line`">
+        <b> js: </b>
+        <ac-input
+          ref="js"
+          v-model="data.js"
+          :focus-select-all-text="true"
+          placeholder="js"
           @report="onreport('report')"
         />
       </div>
     </div>
     <div :class="`${this.prefixCls}-display`" v-else>
-      {{data.content}}
+      <div :class="{
+        [`${prefixCls}-projection`]: data.status.projection||data.status.tableProjection,
+        [`${prefixCls}-double-projection`]: data.status.projection&&data.status.tableProjection,
+      }">
+        <span v-if="icon">
+          <span v-if="icon.array">
+            <span class="ac-unselectable">[</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">]</span>
+          </span>
+          <span v-else>
+            <span class="ac-unselectable">&nbsp;</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">&nbsp;</span>
+          </span>
+        </span>
+        <b class="ac-unselectable">{{data.name}}</b>
+        <icons :style="{visibility: data.status.noFirstNewline?'visible':'hidden'}" name="no_pre_newline" size="0.9rem"/>
+        <icons :style="{visibility: data.status.noNewline?'visible':'hidden'}" name="no_newline" size="0.9rem"/>
+      </div>
+      <div style="display:inline-flex;">
+        <span class="ac-unselectable">&nbsp;&nbsp;</span>
+        <pre style="margin: 0px;padding-left: 0.9em;">{{data.js}}</pre>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import icons from '../icons/icons.vue'
-const prefixCls = 'ac-tree-filter-item'
-import acTreeFilterInput from './ac-tree-filter-input'
-
+const prefixCls = 'ac-table-extra-field-item'
 const typeMap = {
   'string': 'S',
   'boolean': 'B',
@@ -57,15 +98,13 @@ const typeMap = {
 }
 
 export default {
-  name: 'ac-tree-filter-item',
-  components: {acTreeFilterInput},
+  name: 'ac-table-extra-field-item',
+  components: {icons},
   props: {
-    tree: {type: Object, required: true},
     data: {type: Object, required: true},
-    filterState: {type: Object, required: true},
-    filter: {type: Array, required: true},
+    extraFieldState: {type: Object, required: true},
+    extraField: {type: Array, required: true},
     index: {type: Number, default: -1},
-    rawdata: {type: Array, required: true},
     nodes: { type: Object },
   },
   data () {
@@ -81,17 +120,41 @@ export default {
     }
   },
   watch:{
+    'data.type' (value) {
+      if (value !== 'array') {
+        this.data.arrayType = ""
+      }
+    },
   },
   computed: {
+    icon () {
+      if (!this.data.type) {
+        return {
+          type: 'B_U',
+          array: false
+        }
+      }
+      if (this.data.arrayType) {
+        return {
+          type: 'B_'+typeMap[this.data.arrayType],
+          array: true
+        }
+      } else {
+        return {
+          type: 'B_'+typeMap[this.data.type],
+          array: false
+        }
+      }
+    }
   },
   created() {
     if (this.nodes) {
-      this.nodes[this.data.uid] = this
+      this.nodes[this.data.path] = this
     }
   },
   beforeDestroy() {
     if (this.nodes) {
-      delete this.nodes[this.data.uid]
+      delete this.nodes[this.data.path]
     }
   },
   mounted () {
@@ -103,7 +166,7 @@ export default {
           this.data.status.editing = false
           this.$emit('update', {modify: this.data}, this)
         } else { // add new
-          let exists = this.filter.find(_ => _.name === this.data.name)
+          let exists = this.extraField.find(_ => _.name === this.data.name)
           if (!exists) {
             this.data.status.editing = false
             this.$emit('update', {add: this.data}, this)
@@ -113,9 +176,33 @@ export default {
         }
       } else {
         this.$nextTick(() => {
-          this.$refs[value].focus() // the ac-tree-filter-root component
+          this.$refs[value].focus({ preventScroll: true })
         })
       }
+    },
+    updateNewline (status) {
+      if (this.data.type==='object' || this.data.type==='array') {
+        let pre = this.data.status.noFirstNewline
+        let suf = this.data.status.noNewline
+        if (!pre && !suf) {
+          this.data.status.noNewline = true
+        } else if (!pre && suf) {
+          this.data.status.noNewline = true
+          this.data.status.noFirstNewline = true
+        } else if (pre && suf) {
+          this.data.status.noFirstNewline = true
+          this.data.status.noNewline = false
+        } else {
+          this.data.status.noNewline = false
+          this.data.status.noFirstNewline = false
+        }
+      } else {
+        this.data.status.noNewline = !this.data.status.noNewline
+      }
+      this.$emit('update', {status:{newline: {
+        noNewline: this.data.status.noNewline,
+        noFirstNewline: this.data.status.noFirstNewline,
+      }}}, this)
     },
     focus () {
       if (this.data.status.editing) {
@@ -205,8 +292,12 @@ export default {
 </script>
 
 <style lang="scss">
-$pre: ac-tree-filter-item;
+$pre: ac-table-extra-field-item;
 .#{$pre}-projection {
+  color: cyan;
+  font-weight: bolder;
+}
+.#{$pre}-double-projection {
   color: green;
   font-weight: bolder;
 }

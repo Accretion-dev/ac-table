@@ -4,13 +4,14 @@
     tabindex="0"
     @keydown="keydown"
   >
+    <b>Extra fields</b>
     <div :class="`${prefixCls}-tool-bar`">
       <span
         :class="`${prefixCls}-tools-button`"
         @click="clickAdd"
       > + </span>
     </div>
-    <ac-tree-extra-field-item v-for="(thisdata, index) of extraField"
+    <ac-table-extra-field-item v-for="(thisdata, index) of extraField"
       :key="thisdata.path"
       :data="thisdata"
       :index="index"
@@ -19,7 +20,7 @@
       :nodes="nodes"
       @update="onupdate"
     />
-    <ac-tree-extra-field-item v-if="status.adding"
+    <ac-table-extra-field-item v-if="status.adding"
       ref="adding"
       key="adding"
       :data="newData"
@@ -32,16 +33,16 @@
 
 <script>
 /* comments:
- * do not use data.name as key in ac-tree-extra-field-item
+ * do not use data.name as key in ac-table-extra-field-item
  *   because every time you change data.name, will redraw this component, cause update bugs
 */
 
-const prefixCls = 'ac-tree-extra-field'
-import acTreeExtraFieldItem from './ac-tree-extra-field-item'
+const prefixCls = 'ac-table-extra-field'
+import acTableExtraFieldItem from './ac-table-extra-field-item'
 
 export default {
-  name: 'ac-tree-extra-field',
-  components: {acTreeExtraFieldItem},
+  name: 'ac-table-extra-field',
+  components: {acTableExtraFieldItem},
   props: {
     extraField: {type: Array, required: true},
     extraFieldState: {type: Object, required: true},
@@ -80,6 +81,7 @@ export default {
         func: "",
         status: {
           projection: false,
+          tableProjection: false,
           editing: true,
           selected: false,
           noFirstNewline: false,
@@ -98,19 +100,29 @@ export default {
         this.$el.focus({ preventScroll: true })
       }
     },
-    changeProjection (key, only) {
+    changeProjection (key, only, prefix) {
       let child = this.$children.find(_ => _.$vnode.data.key===key)
       if (child) {
-        if (only) {
-          this.$emit('update', {status: {projection: true, only: true}}, child)
-          //child.data.status.projection = true
-        } else {
-          if (child.data.status.projection) {
-            this.$emit('update', {status: {projection: false}}, child)
+        if (prefix) {
+          if (only) {
+            this.$emit('update', {status: {projection: true, only: true}, prefix}, child)
           } else {
-            this.$emit('update', {status: {projection: true}}, child)
+            if (child.data.status.tableProjection) {
+              this.$emit('update', {status: {projection: false}, prefix}, child)
+            } else {
+              this.$emit('update', {status: {projection: true}, prefix}, child)
+            }
           }
-          //child.data.status.projection = !child.data.status.projection
+        } else {
+          if (only) {
+            this.$emit('update', {status: {projection: true, only: true}, prefix}, child)
+          } else {
+            if (child.data.status.projection) {
+              this.$emit('update', {status: {projection: false}, prefix}, child)
+            } else {
+              this.$emit('update', {status: {projection: true}, prefix}, child)
+            }
+          }
         }
       }
     },
@@ -199,10 +211,10 @@ export default {
       let path = obj.path
       this.nodes[path].updateNewline()
     },
-    goToProjection () {
+    goToProjection (prefix) {
       let children = this.$children.find(_ => _.$vnode.data.key===this.extraFieldState.selected)
       if (children) {
-        this.$emit('update', {goToProjection: children.data})
+        this.$emit('update', {goToProjection: children.data, prefix})
       }
     },
     keydown (event) {
@@ -217,6 +229,19 @@ export default {
           case 'ArrowDown':
             event.preventDefault()
             this.moveSelect(1)
+            break
+          case 'G':
+            event.preventDefault()
+            this.goToProjection('table')
+            break
+          case 'P':
+            event.preventDefault()
+            this.changeProjection(this.extraFieldState.selected, false, 'table')
+            break
+          case 'O':
+            event.preventDefault()
+            // put this function here because nodes is changing
+            this.changeProjection(this.extraFieldState.selected, true, 'table')
             break
         }
       } else {
@@ -250,7 +275,7 @@ export default {
           case 'p':
             event.preventDefault()
             // put this function here because nodes is changing
-            this.changeProjection(this.extraFieldState.selected)
+            this.changeProjection(this.extraFieldState.selected, false)
             break
           case 'o':
             event.preventDefault()
@@ -274,7 +299,7 @@ export default {
 </script>
 
 <style lang="scss">
-$pre: ac-tree-extra-field;
+$pre: ac-table-extra-field;
 .#{$pre} {
   outline:none;
   flex: 1;

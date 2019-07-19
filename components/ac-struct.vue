@@ -4,18 +4,19 @@
     tabindex="0"
     @keydown="keydown"
   >
+    <b>Structure ({{prefix?prefix:'list'}})</b>
     <div :class="`${prefixCls}-tools`">
       <span
         :class="`${prefixCls}-tools-button`"
         @click="onChangeAllFold(1)"
-      > + </span>
+      > ++ </span>
       <span
         :class="`${prefixCls}-tools-button`"
         @click="onChangeAllFold(0)"
-      > - </span>
+      > -- </span>
     </div>
     <div :class="`${prefixCls}-content`">
-      <ac-tree-item
+      <ac-struct-item
         ref="tree-root"
         :tree="tree"
         :tree-state="treeState"
@@ -27,15 +28,16 @@
 </template>
 
 <script>
-const prefixCls = 'ac-table-tree'
-import acTreeItem from './ac-tree-item'
+const prefixCls = 'ac-struct'
+import acStructItem from './ac-struct-item'
 
 export default {
-  name: 'ac-table-tree',
-  components: {acTreeItem},
+  name: 'ac-struct',
+  components: {acStructItem},
   props: {
     tree: { type: Object, required: true },
     treeState: { type: Object, required: true },
+    prefix: { type: String, default: "" },
   },
   data () {
     return {
@@ -61,7 +63,7 @@ export default {
   },
   methods: {
     goToProjection (tree) {
-      this.$emit('update', {goToProjection: tree})
+      this.$emit('update', {goToProjection: tree, prefix: this.prefix})
     },
     selectNode(newObj, oldObj) {
       if (oldObj!==undefined&&this.nodes[oldObj]) {
@@ -198,18 +200,20 @@ export default {
         this.treeState.selected = this.tree.children[0].path
         return
       }
+      let key = this.prefix?'tableTreeState':'treeState'
       if (move==='up') { // up
         this.selectUP(node)
-        this.$emit('update', {storeUpdate: ['treeState'], changeSelect: true})
+        this.$emit('update', {storeUpdate: [key], changeSelect: true})
       } else if (move==='down') { // down
         this.selectDOWN(node)
-        this.$emit('update', {storeUpdate: ['treeState'], changeSelect: true})
+        this.$emit('update', {storeUpdate: [key], changeSelect: true})
       }
     },
     onupdate (change, value, origin) {
       if (origin) {
         this.treeState.selected = origin.tree.path
       }
+      change.prefix = this.prefix
       this.$emit('update', change, value, origin)
     },
     goThrough(root, func) {
@@ -221,7 +225,7 @@ export default {
       }
     },
     doForAllSubTree (root, func) {
-      let children = root.$children.filter(_ => _.$options.name === 'ac-table-tree-item')
+      let children = root.$children.filter(_ => _.$options.name === 'ac-struct-item')
       func(root)
       if (children) {
         for (let child of children) {
@@ -230,7 +234,7 @@ export default {
       }
     },
     onChangeAllFold(status, root) {
-      if (!root) root = this.$children.find(_ => _.$options.name === 'ac-table-tree-item')
+      if (!root) root = this.$children.find(_ => _.$options.name === 'ac-struct-item')
       if (status) {
         this.doForAllSubTree(root, _=> {
           if (_.tree.root||!_.tree.children) return
@@ -242,14 +246,14 @@ export default {
           _.onlyUpdateFold(status)
         })
       }
-      this.$emit('update')
+      this.$emit('update', {prefix:this.prefix})
     }
   }
 }
 </script>
 
 <style lang="scss">
-$pre: ac-table-tree;
+$pre: ac-struct;
 .#{$pre} {
   outline:none;
   flex: 1;

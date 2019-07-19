@@ -11,7 +11,7 @@
 </template>
 
 <script>
-const prefixCls = 'ac-tree-filter-input'
+const prefixCls = 'ac-table-filter-input'
 import jsonFilterParser from 'mongodb-simple-query-syntax/pegjs/json-filter.js'
 import _parser from 'mongodb-simple-query-syntax/json-filter.js'
 const {parse: jsonParse, Parser: jsonParser} = _parser
@@ -71,7 +71,7 @@ let demo = `
 `
 
 export default {
-  name: 'ac-tree-filter-input',
+  name: 'ac-table-filter-input',
   props: {
     value: {type: String, default: ''},
     tree:  {type: Object, required: true},
@@ -191,7 +191,7 @@ export default {
 </script>
 
 <style lang="scss">
-$pre: ac-tree-filter-input;
+$pre: ac-table-filter-input;
 .#{$pre} {
   box-sizing: border-box;
   //border-style: solid;

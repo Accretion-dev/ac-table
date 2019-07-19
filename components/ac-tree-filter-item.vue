@@ -34,7 +34,13 @@
       </div>
     </div>
     <div :class="`${this.prefixCls}-display`" v-else>
-      {{data.content}}
+      <div :class="{[`${prefixCls}-projection`]: data.status.projection}">
+        <b class="ac-unselectable">{{data.name}}</b>
+      </div>
+      <div style="display:inline-flex;">
+        <span class="ac-unselectable">&nbsp;&nbsp;</span>
+        <pre style="margin: 0px;padding-left: 0.9em;">{{data.content}}</pre>
+      </div>
     </div>
   </div>
 </template>

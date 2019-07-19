@@ -219,7 +219,6 @@ export default {
           selected: null,
         },
         configs: {},
-        filters: {},
         status: {
           sidebar: 'tree',
           page: 0,
@@ -341,7 +340,7 @@ export default {
       this.analyser = new JsonAnalyser({tree: value})
     }
     let filtersChange = (newValue, oldValue) => {
-      this.store.filters = newValue
+      this.store.filter = newValue
     }
     let configsChange = (newValue, oldValue) => {
       this.store.configs = newValue
@@ -511,11 +510,11 @@ export default {
         this.store.projection = this.projection
       }
     },
-    setStoreFilters (filters) {
-      if (filters) {
-        this.store.filters = filters
+    setStoreFilters (filter) {
+      if (filter) {
+        this.store.filter = filters
       } else {
-        this.store.filters = this.filters
+        this.store.filter = this.filter
       }
     },
     setStoreConfigs (configs) {
@@ -942,10 +941,10 @@ export default {
     // about filter and projection
     onConfigChange (newValue, oldValue) {
       this.updateDatabase(['configs'])
-      this.onFilterChange(this.store.filters)
+      this.onFilterChange(this.store.filter)
     },
     onDataChange (newValue, oldValue) {
-      this.onFilterChange(this.store.filters)
+      this.onFilterChange(this.store.filter)
     },
     onFilterChange (newValue, oldValue, init) {
       let filteredData = this.data

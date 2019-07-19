@@ -234,6 +234,10 @@ export default {
       projectedStrings: [],
       pageStrings: [],
       store: {
+        filter: [],
+        filterState: {
+          selected: null,
+        },
         tree: {root: true, status:{open:true}},
         treeState: {
           selected: null,
@@ -245,10 +249,6 @@ export default {
         },
         extraField: [],
         extraFieldState: {
-          selected: null,
-        },
-        filter: [],
-        filterState: {
           selected: null,
         },
         configs: {},
@@ -360,29 +360,50 @@ export default {
   created () {
     // watch for tab change
     this.$watch('store.status.sidebar', this.focusOnSidebar)
-    /** TODO
-    * when data or configs or projection changed(outside)
-      update store
-    * when store.tree, store.projection, store.filters change(inside)
-      update database and the print
-    */
+    // watch for props change
     let dataChange = (newValue, oldValue) => {
       console.log('data changed!')
     }
+    let configsChange = (newValue, oldValue) => {
+      console.log('configs changed!')
+      this.store.configs = newValue
+    }
+    let filtersChange = (newValue, oldValue) => {
+      console.log('filter changed!')
+      this.store.filter = newValue
+    }
+
     let structsChange = (newValue, oldValue) => {
       console.log('structs changed!')
       this.analyser = new JsonAnalyser({tree: value})
     }
-    let filtersChange = (newValue, oldValue) => {
-      this.store.filter = newValue
+    let projectionsChange = (newValue, oldValue) => {
+      console.log('projections changed!')
     }
-    let configsChange = (newValue, oldValue) => {
-      this.store.configs = newValue
+    let extraFieldsChange = (newValue, oldValue) => {
+      console.log('extraFields changed!')
     }
+    let tableStructsChange = (newValue, oldValue) => {
+      console.log('table structs changed!')
+      this.analyser = new JsonAnalyser({tree: value})
+    }
+    let tableProjectionsChange = (newValue, oldValue) => {
+      console.log('table projections changed!')
+    }
+    let tableExtraFieldsChange = (newValue, oldValue) => {
+      console.log('table extraFields changed!')
+    }
+
     this.$watch('data', dataChange)
-    this.$watch('structs',  structsChange)
-    this.$watch('filters', filtersChange)
     this.$watch('configs', configsChange, {deep: true})
+    this.$watch('filters', filtersChange)
+
+    this.$watch('structs',  structsChange)
+    this.$watch('projections',  projectionsChange)
+    this.$watch('extraFields',  extraFieldsChange)
+    this.$watch('tableStructs',  tableStructsChange)
+    this.$watch('tableProjections',  tableProjectionsChange)
+    this.$watch('tableExtraFields',  tableExtraFieldsChange)
     //this.$watch('store.configs', this.onConfigChange, {deep: true})
     this.init()
   },
@@ -404,7 +425,7 @@ export default {
       let keys
       if (key) {
         keys = [key]
-      } else {
+      } else { // save all
         keys = Object.keys(this.store)
         await tx.objectStore('uids').put(this.uid, this.uid)
       }
@@ -429,11 +450,10 @@ export default {
     async initDatabase (initial = {}) {
       if (!window.indexedDB) {
         throw Error('no support for indexedDB')
-      } else {
+      } else { // client support indexedDB
         let keys = Object.keys(this.store) // get all keys from default
         let db = await openDB('ac-table', 1, {
           upgrade (db, oldVersion, newVersion, transaction) {
-            //db.createObjectStore('trees', { keyPath: 'uid' })
             db.createObjectStore('uids')
             for (let key of keys) {
               db.createObjectStore(key)

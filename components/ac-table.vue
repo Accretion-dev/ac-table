@@ -123,7 +123,7 @@
               :tree="store.tree"
               :filter="store.filter"
               :filter-state="store.filterState"
-              @update="onExtraFieldUpdate"
+              @update="onFilterUpdate"
             />
           </div>
         </div>
@@ -348,8 +348,7 @@ export default {
     this.$watch('struct',  structChange)
     this.$watch('filters', filtersChange)
     this.$watch('configs', configsChange, {deep: true})
-    this.$watch('store.configs', this.onConfigChange, {deep: true})
-
+    //this.$watch('store.configs', this.onConfigChange, {deep: true})
     this.init()
   },
   mounted () {
@@ -364,7 +363,6 @@ export default {
         this.loading = false
         this.initStore()
       }
-      console.log(this.analyser)
     },
     // about database and init
     async saveStore (key, tx) {
@@ -870,13 +868,13 @@ export default {
       }
     },
     onFilterUpdate (change, origin) {
+      console.log('filter update:', change)
       if (change.add) {
         this.store.filter.push(change.add)
         this.updateDatabase(['filter'])
       }
       if (change.modify) {
         this.updateDatabase(['filter'])
-        this.updateProjectionStatus(change.modify)
       }
       if (change.changeShow||change.reorder) {
         this.updateDatabase(['filter'])
@@ -889,7 +887,6 @@ export default {
         }
         this.updateDatabase(['filter'])
         this.updateDatabase(['filterState'])
-        this.updateProjectionStatus(change.deleted)
       }
     },
     goThrough(root, func) {

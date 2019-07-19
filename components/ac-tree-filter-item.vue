@@ -20,20 +20,21 @@
           v-model="data.name"
           :focus-select-all-text="true"
           placeholder="name"
-          @report="onreport('type')"
+          @report="onreport('content')"
         />
       </div>
       <div :class="`${this.prefixCls}-form-line`">
-        <ac-tree-filter-root
+        <ac-tree-filter-input
           ref="content"
           v-model="data.content"
           :tree="tree"
           :rawdata="rawdata"
+          @report="onreport('report')"
         />
       </div>
     </div>
     <div :class="`${this.prefixCls}-display`" v-else>
-      {{data}}
+      {{data.content}}
     </div>
   </div>
 </template>
@@ -41,7 +42,7 @@
 <script>
 import icons from '../icons/icons.vue'
 const prefixCls = 'ac-tree-filter-item'
-import acTreeFilterRoot from './ac-tree-filter-root'
+import acTreeFilterInput from './ac-tree-filter-input'
 
 const typeMap = {
   'string': 'S',
@@ -57,7 +58,7 @@ const typeMap = {
 
 export default {
   name: 'ac-tree-filter-item',
-  components: {acTreeFilterRoot},
+  components: {acTreeFilterInput},
   props: {
     tree: {type: Object, required: true},
     data: {type: Object, required: true},
@@ -98,10 +99,21 @@ export default {
   methods: {
     onreport (value) {
       if (value==='report') {
-        console.log('report')
+        if (this.index!==-1) { // modify exists
+          this.data.status.editing = false
+          this.$emit('update', {modify: this.data}, this)
+        } else { // add new
+          let exists = this.filter.find(_ => _.name === this.data.name)
+          if (!exists) {
+            this.data.status.editing = false
+            this.$emit('update', {add: this.data}, this)
+          } else {
+            this.$refs.name.setError('duplicated name')
+          }
+        }
       } else {
         this.$nextTick(() => {
-          this.$refs[value].focus({ preventScroll: true })
+          this.$refs[value].focus() // the ac-tree-filter-root component
         })
       }
     },

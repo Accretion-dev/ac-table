@@ -5,13 +5,13 @@
       v-model="innerValue"
       placeholder="filter"
       :data="inputData"
+      @report="report"
     />
   </span>
 </template>
 
 <script>
-const prefixCls = 'ac-tree-filter-root'
-import structItem from './ac-tree-filter-struct-item'
+const prefixCls = 'ac-tree-filter-input'
 import jsonFilterParser from 'mongodb-simple-query-syntax/pegjs/json-filter.js'
 import _parser from 'mongodb-simple-query-syntax/json-filter.js'
 const {parse: jsonParse, Parser: jsonParser} = _parser
@@ -71,7 +71,7 @@ let demo = `
 `
 
 export default {
-  name: 'ac-tree-filter-root',
+  name: 'ac-tree-filter-input',
   props: {
     value: {type: String, default: ''},
     tree:  {type: Object, required: true},
@@ -99,7 +99,8 @@ export default {
     },
     innerValue (newValue, oldValue) {
       this.$emit('input', newValue)
-    }
+      console.log('update:', this.parser)
+    },
   },
   created() {
     this.inputData.parser = this.dataParser
@@ -178,13 +179,19 @@ export default {
           result,
         }
       }
-    }
+    },
+    report (value) {
+      this.$emit('report', value)
+    },
+    focus () {
+      this.$refs.value.focus()
+    },
   }
 }
 </script>
 
 <style lang="scss">
-$pre: ac-tree-filter-root;
+$pre: ac-tree-filter-input;
 .#{$pre} {
   box-sizing: border-box;
   //border-style: solid;

@@ -53,7 +53,7 @@
              @mouseover="overBody"
              @mouseleave="leaveBody"
         />
-        <ac-tree-item
+        <ac-struct-item
           v-for="(child,thisindex) of tree.children"
           ref="subtrees"
           :key="child.path"
@@ -176,7 +176,7 @@ export default {
     this.nodes[this.tree.path] = this
   },
   beforeCreate: function () {
-    this.$options.components.acTreeItem = require('./ac-tree-item.vue').default
+    this.$options.components.acStructItem = require('./ac-struct-item.vue').default
   },
   methods: {
     onlyUpdateFold (value) {

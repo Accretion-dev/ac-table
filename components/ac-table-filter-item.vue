@@ -1,36 +1,55 @@
 <template>
   <div
-    draggable="true"
+    :draggable="!data.status.editing"
     :class="{
     [`${prefixCls}`]: true,
-    [`${prefixCls}-not-show`]: !this.data.status.show,
     [`${prefixCls}-selected`]: selected}"
     @click="click"
+    @dblclick="dblclick"
     @dragover="dragover"
     @dragleave="dragleave"
     @drop="drop"
     @dragstart="dragstart"
     @dragend="dragend"
   >
-    <span v-if="icon">
-      <icons :name="data.extraField?'B_E':'blank'" size="0.9em"/>
-      <span v-if="icon.array">
-        <span class="ac-unselectable">[</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">]</span>
-      </span>
-      <span v-else>
-        <span class="ac-unselectable">&nbsp;</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">&nbsp;</span>
-      </span>
-    </span>
-    <b class="ac-unselectable">{{data.name}}</b>
-    <span class="ac-unselectable" v-if="!data.extraField">:{{data.path}}</span>
-    <icons :style="{visibility: data.status.noFirstNewline?'visible':'hidden'}" name="no_pre_newline" size="0.9rem"/>
-    <icons :style="{visibility: data.status.noNewline?'visible':'hidden'}" name="no_newline" size="0.9rem"/>
+    <div :class="`${this.prefixCls}-editing`" v-if="data.status.editing">
+      <div :class="`${this.prefixCls}-form-line`">
+        <b> name: </b>
+        <ac-input
+          ref="name"
+          v-model="data.name"
+          :focus-select-all-text="true"
+          placeholder="name"
+          @report="onreport('content')"
+        />
+      </div>
+      <div :class="`${this.prefixCls}-form-line`">
+        <ac-table-filter-input
+          ref="content"
+          v-model="data.content"
+          :tree="tree"
+          :rawdata="rawdata"
+          @report="onreport('report')"
+        />
+      </div>
+    </div>
+    <div :class="`${this.prefixCls}-display`" v-else>
+      <div :class="{[`${prefixCls}-projection`]: data.status.projection}">
+        <b class="ac-unselectable">{{data.name}}</b>
+      </div>
+      <div style="display:inline-flex;">
+        <span class="ac-unselectable">&nbsp;&nbsp;</span>
+        <pre style="margin: 0px;padding-left: 0.9em;">{{data.content}}</pre>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import icons from '../icons/icons.vue'
-const prefixCls = 'ac-tree-projection-item'
+const prefixCls = 'ac-table-filter-item'
+import acTreeFilterInput from './ac-table-filter-input'
+
 const typeMap = {
   'string': 'S',
   'boolean': 'B',
@@ -44,12 +63,16 @@ const typeMap = {
 }
 
 export default {
-  name: 'ac-tree-projection-item',
-  components: {icons},
+  name: 'ac-table-filter-item',
+  components: {acTreeFilterInput},
   props: {
+    tree: {type: Object, required: true},
     data: {type: Object, required: true},
-    projectionState: {type: Object, required: true},
-    index: {type: Number, required: true},
+    filterState: {type: Object, required: true},
+    filter: {type: Array, required: true},
+    index: {type: Number, default: -1},
+    rawdata: {type: Array, required: true},
+    nodes: { type: Object },
   },
   data () {
     return {
@@ -60,39 +83,74 @@ export default {
         dragover: 0,
         elDrag: null
       },
+      typeLists:['string','date','number','array','object'],
     }
   },
   watch:{
   },
   computed: {
-    icon () {
-      if (!this.data.type) { return null }
-      if (this.data.arrayType) {
-        return {
-          type: 'B_'+typeMap[this.data.arrayType],
-          array: true
-        }
-      } else {
-        return {
-          type: 'B_'+typeMap[this.data.type],
-          array: false
-        }
-      }
-    }
   },
   created() {
+    if (this.nodes) {
+      this.nodes[this.data.uid] = this
+    }
+  },
+  beforeDestroy() {
+    if (this.nodes) {
+      delete this.nodes[this.data.uid]
+    }
   },
   mounted () {
   },
   methods: {
+    onreport (value) {
+      if (value==='report') {
+        if (this.index!==-1) { // modify exists
+          this.data.status.editing = false
+          this.$emit('update', {modify: this.data}, this)
+        } else { // add new
+          let exists = this.filter.find(_ => _.name === this.data.name)
+          if (!exists) {
+            this.data.status.editing = false
+            this.$emit('update', {add: this.data}, this)
+          } else {
+            this.$refs.name.setError('duplicated name')
+          }
+        }
+      } else {
+        this.$nextTick(() => {
+          this.$refs[value].focus() // the ac-table-filter-root component
+        })
+      }
+    },
+    focus () {
+      if (this.data.status.editing) {
+        this.$refs.name.focus({ preventScroll: true })
+      } else {
+        this.$el.focus({ preventScroll: true })
+      }
+    },
+    dblclick () {
+      if (this.data.status.editing) return
+      this.data.status.editing = !this.data.status.editing
+      this.$forceUpdate()
+      this.$nextTick(() => {
+        this.focus()
+      })
+    },
     click (event) {
+      if (!this.data.status.editing) {
+        this.$emit('update', {changeSelect: this.data})
+      }
+    },
+    select () {
       this.$emit('update', {changeSelect: this.data})
     },
     changeSelect (status) {
       this.selected = status
-    },
-    changeShow () {
-      this.data.status.show = !this.data.status.show
+      if (status) {
+        this.focus()
+      }
     },
     dragover (event) {
       event.preventDefault()
@@ -153,18 +211,27 @@ export default {
 </script>
 
 <style lang="scss">
-$pre: ac-tree-projection-item;
+$pre: ac-table-filter-item;
+.#{$pre}-projection {
+  color: green;
+  font-weight: bolder;
+}
 .#{$pre} {
   box-sizing: border-box;
 }
-.#{$pre}:hover {
+.#{$pre}-editing {
+  display: flex;
+  flex-direction: column;
+}
+.#{$pre}-form-line {
+  display: flex;
+  align-items: center;
+}
+.#{$pre}-display:hover {
   background: #d8ffd7;
 }
 .#{$pre}-selected {
   background: #d8ffd775;
-}
-.#{$pre}-not-show {
-  color: gainsboro;
 }
 .#{$pre}-drag-upper {
   box-shadow: inset 0px 1px 0px 0px, 0px -1px 0px 0px;

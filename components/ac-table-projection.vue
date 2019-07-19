@@ -4,7 +4,7 @@
     tabindex="0"
     @keydown="keydown"
   >
-    <ac-tree-projection-item v-for="(data, index) of projections"
+    <ac-table-projection-item v-for="(data, index) of projections"
       :key="getKey(data)"
       :data="data"
       :index="index"
@@ -15,12 +15,12 @@
 </template>
 
 <script>
-const prefixCls = 'ac-tree-projection'
-import acTreeProjectionItem from './ac-tree-projection-item'
+const prefixCls = 'ac-table-projection'
+import acTableProjectionItem from './ac-table-projection-item'
 
 export default {
-  name: 'ac-tree-projection',
-  components: {acTreeProjectionItem},
+  name: 'ac-table-projection',
+  components: {acTableProjectionItem},
   props: {
     projections: {type: Array, required: true},
     projectionState: {type: Object, required: true},
@@ -204,7 +204,7 @@ export default {
 </script>
 
 <style lang="scss">
-$pre: ac-tree-projection;
+$pre: ac-table-projection;
 .#{$pre} {
   outline:none;
   flex: 1;

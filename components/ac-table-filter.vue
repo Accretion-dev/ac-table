@@ -10,21 +10,25 @@
         @click="clickAdd"
       > + </span>
     </div>
-    <ac-tree-extra-field-item v-for="(thisdata, index) of extraField"
+    <ac-table-filter-item v-for="(thisdata, index) of filter"
       :key="thisdata.path"
       :data="thisdata"
       :index="index"
-      :extra-field-state="extraFieldState"
-      :extra-field="extraField"
+      :filter-state="filterState"
+      :filter="filter"
       :nodes="nodes"
+      :tree="tree"
+      :rawdata="rawdata"
       @update="onupdate"
     />
-    <ac-tree-extra-field-item v-if="status.adding"
+    <ac-table-filter-item v-if="status.adding"
       ref="adding"
       key="adding"
       :data="newData"
-      :extra-field-state="extraFieldState"
-      :extra-field="extraField"
+      :filter-state="filterState"
+      :filter="filter"
+      :tree="tree"
+      :rawdata="rawdata"
       @update="onupdate"
     />
   </div>
@@ -32,19 +36,21 @@
 
 <script>
 /* comments:
- * do not use data.name as key in ac-tree-extra-field-item
+ * do not use data.name as key in ac-table-extra-field-item
  *   because every time you change data.name, will redraw this component, cause update bugs
 */
 
-const prefixCls = 'ac-tree-extra-field'
-import acTreeExtraFieldItem from './ac-tree-extra-field-item'
+const prefixCls = 'ac-table-filter'
+import acTableFilterItem from './ac-table-filter-item'
 
 export default {
-  name: 'ac-tree-extra-field',
-  components: {acTreeExtraFieldItem},
+  name: 'ac-table-filter',
+  components: {acTableFilterItem},
   props: {
-    extraField: {type: Array, required: true},
-    extraFieldState: {type: Object, required: true},
+    filter: {type: Array, required: true},
+    filterState: {type: Object, required: true},
+    tree: {type: Object, required: true},
+    rawdata: {type: Array, required: true},
   },
   data () {
     return {
@@ -64,26 +70,20 @@ export default {
     this.newData = this.genNewData()
   },
   mounted () {
-    let selected = this.extraFieldState.selected
+    let selected = this.filterState.selected
     this.setSelected(selected, true)
   },
   methods: {
     genNewData () {
       return {
-        name: "newField",
-        path: (new Date()).toISOString(), // uid
-        type: 'string',
-        arrayType: '',
-        extraField: true,
-        formatter: null,
-        js: "v",
-        func: "",
+        name: "default",
+        uid: (new Date()).toISOString(), // uid
+        content: "",
+        contentObj: "",
         status: {
-          projection: false,
           editing: true,
           selected: false,
-          noFirstNewline: false,
-          noNewline: false,
+          use: true,
         },
       }
     },
@@ -121,50 +121,50 @@ export default {
       }
     },
     changeSelect (status) {
-      if (!this.extraField.length) return
+      if (!this.filter.length) return
       if (status === undefined) { // reselect, e.g. at init
-        if (this.extraFieldState.selected) {
-          this.setSelected(this.extraFieldState.selected, true)
+        if (this.filterState.selected) {
+          this.setSelected(this.filterState.selected, true)
         }
       } else if (typeof(status)==='number') { // move updown
-        if (!this.extraFieldState.selected) {
-          this.extraFieldState.selected = this.extraField[0]
-          this.setSelected(this.extraFieldState.selected, true)
+        if (!this.filterState.selected) {
+          this.filterState.selected = this.filter[0]
+          this.setSelected(this.filterState.selected, true)
           this.$emit('update', {changeSelect: true})
         } else {
-          this.setSelected(this.extraFieldState.selected, false)
-          let index = this.extraField.findIndex(_ => _.path===this.extraFieldState.selected)
+          this.setSelected(this.filterState.selected, false)
+          let index = this.filter.findIndex(_ => _.path===this.filterState.selected)
           if (index === -1) {
             index = 0
           } else {
-            index = (index + status + this.extraField.length)%this.extraField.length
+            index = (index + status + this.filter.length)%this.filter.length
           }
-          let key = this.extraField[index].path
-          this.extraFieldState.selected = key
-          this.setSelected(this.extraFieldState.selected, true)
+          let key = this.filter[index].path
+          this.filterState.selected = key
+          this.setSelected(this.filterState.selected, true)
           this.$emit('update', {changeSelect: true})
         }
       } else { // status is a project element
         let obj = status
-        this.setSelected(this.extraFieldState.selected, false)
+        this.setSelected(this.filterState.selected, false)
         let key = status.path
-        this.extraFieldState.selected = key
-        this.setSelected(this.extraFieldState.selected, true)
+        this.filterState.selected = key
+        this.setSelected(this.filterState.selected, true)
         this.$emit('update', {changeSelect: true})
       }
     },
     moveSelect (status) {
-      if (this.extraField.length<=1) return
-      if (this.extraFieldState.selected) {
-        let oldIndex = this.extraField.findIndex(_ => _.path===this.extraFieldState.selected)
+      if (this.filter.length<=1) return
+      if (this.filterState.selected) {
+        let oldIndex = this.filter.findIndex(_ => _.path===this.filterState.selected)
         let newIndex
         if (oldIndex === -1) {
           return
         } else {
-          newIndex = (oldIndex + status + this.extraField.length)%this.extraField.length
+          newIndex = (oldIndex + status + this.filter.length)%this.filter.length
         }
-        let [deleted] = this.extraField.splice(oldIndex,1)
-        this.extraField.splice(newIndex,0,deleted)
+        let [deleted] = this.filter.splice(oldIndex,1)
+        this.filter.splice(newIndex,0,deleted)
         this.$emit('update', {reorder: true})
       }
     },
@@ -173,16 +173,16 @@ export default {
         this.clickAdd()
       }
       if (change.changeSelect) {
-        if (this.extraFieldState.selected) {
-          this.setSelected(this.extraFieldState.selected, false)
+        if (this.filterState.selected) {
+          this.setSelected(this.filterState.selected, false)
         }
-        this.extraFieldState.selected = change.changeSelect.path
+        this.filterState.selected = change.changeSelect.path
         this.changeSelect()
       }
       if (change.reorder) {
         let {start,end} = change.reorder
-        let [deleted] = this.extraField.splice(start,1)
-        this.extraField.splice(end,0,deleted)
+        let [deleted] = this.filter.splice(start,1)
+        this.filter.splice(end,0,deleted)
       }
       if (change.modify) {
         setTimeout(() => {
@@ -194,13 +194,13 @@ export default {
       this.$emit('update', change, origin)
     },
     updateNewline () {
-      let obj = this.extraField.find(_ => _.path===this.extraFieldState.selected)
+      let obj = this.filter.find(_ => _.path===this.filterState.selected)
       if (!obj) return
       let path = obj.path
       this.nodes[path].updateNewline()
     },
     goToProjection () {
-      let children = this.$children.find(_ => _.$vnode.data.key===this.extraFieldState.selected)
+      let children = this.$children.find(_ => _.$vnode.data.key===this.filterState.selected)
       if (children) {
         this.$emit('update', {goToProjection: children.data})
       }
@@ -234,7 +234,7 @@ export default {
           case 'd':
           case '-':
             event.preventDefault()
-            let children = this.$children.find(_ => _.$vnode.data.key===this.extraFieldState.selected)
+            let children = this.$children.find(_ => _.$vnode.data.key===this.filterState.selected)
             if (children) {
               this.$emit('update', {deleted: children.data})
             }
@@ -250,12 +250,12 @@ export default {
           case 'p':
             event.preventDefault()
             // put this function here because nodes is changing
-            this.changeProjection(this.extraFieldState.selected)
+            this.changeProjection(this.filterState.selected)
             break
           case 'o':
             event.preventDefault()
             // put this function here because nodes is changing
-            this.changeProjection(this.extraFieldState.selected, true)
+            this.changeProjection(this.filterState.selected, true)
             break
           case 'g':
             event.preventDefault()
@@ -263,7 +263,7 @@ export default {
             break
           case 'Enter':
             event.preventDefault()
-            let child = this.$children.find(_ => _.data.path===this.extraFieldState.selected)
+            let child = this.$children.find(_ => _.data.path===this.filterState.selected)
             if (child) child.dblclick()
             break
         }
@@ -274,7 +274,7 @@ export default {
 </script>
 
 <style lang="scss">
-$pre: ac-tree-extra-field;
+$pre: ac-table-filter;
 .#{$pre} {
   outline:none;
   flex: 1;

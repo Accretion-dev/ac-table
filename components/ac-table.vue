@@ -18,15 +18,31 @@
     </div>
     <div :class="`${prefixCls}-header`">
       <span
-        :class="`${prefixCls}-toolbar`"
-        :style="{background: status.showSidebar?'#d8ffd7':'unset'}"
+        :class="`${prefixCls}-show-toolbar`"
         @click="status.showSidebar=!status.showSidebar"
       >
-        <icons name="list" size="1rem" />
+        <icons v-if="!status.showSidebar" name="double-angle-pointing-to-right" size="1rem" />
+        <icons v-if="status.showSidebar" name="double-left-chevron" size="1rem" />
       </span>
-      <div :class="`${prefixCls}-sidebar-tab`" @click="clickChangeSidebar">
+      <div :class="`${prefixCls}-sidebar-tab`" @click="clickChangeSidebar($event, 'mode')">
+        <span name="list" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.mode==='list'}">
+          <icons class="ac-unselectable" style="pointer-events:none;padding: 0 0.5rem;" name="numbered-list" size="1rem" />
+        </span>
+        <span name="table" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.mode==='table'}">
+          <icons class="ac-unselectable" style="pointer-events:none;padding: 0 0.5rem;" name="table-grid" size="1rem" />
+        </span>
+        <span name="fold" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.mode==='fold'}">
+          <icons class="ac-unselectable" style="pointer-events:none;padding: 0 0.5rem;" name="tree-json" size="1rem" />
+        </span>
+      </div>
+      <div :class="`${prefixCls}-sidebar-tab`" style="border: solid; border-width: thin;" @click="clickChangeSidebar($event, 'sidebar')">
+        <span name="filter" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='filter'}">
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">F</span>
+        </span>
+        <icons class="ac-unselectable" style="pointer-events:none;padding: 0 0 0 0.5rem;" name="numbered-list" size="1rem" />
+        :
         <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
-          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">T</span>
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">S</span>
         </span>
         <span name="projection" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='projection'}">
           <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">P</span>
@@ -34,8 +50,16 @@
         <span name="extraField" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='extraField'}">
           <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">E</span>
         </span>
-        <span name="filter" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='filter'}">
-          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">F</span>
+        <icons class="ac-unselectable" style="pointer-events:none;padding: 0 0 0 0.5rem;" name="table-grid" size="1rem" />
+        :
+        <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">S</span>
+        </span>
+        <span name="projection" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='projection'}">
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">P</span>
+        </span>
+        <span name="extraField" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='extraField'}">
+          <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">E</span>
         </span>
       </div>
       <span @click="cleanCurrentDatabase">
@@ -95,28 +119,28 @@
       <template v-else>
         <div v-show="status.showSidebar" ref="sidebar-wrapper" :class="`${prefixCls}-sidebar-wrapper`">
           <div ref="sidebar" :class="`${prefixCls}-sidebar`">
-            <ac-tree
+            <ac-struct
               v-show="store.status.sidebar==='tree'"
               ref="tree"
               :tree="store.tree"
               :tree-state="store.treeState"
               @update="onTreeUpdate"
             />
-            <ac-tree-projection
+            <ac-table-projection
               v-show="store.status.sidebar==='projection'"
               ref="projection"
               :projections="store.projection"
               :projectionState="store.projectionState"
               @update="onProjectionUpdate"
             />
-            <ac-tree-extra-field
+            <ac-table-extra-field
               v-show="store.status.sidebar==='extraField'"
               ref="extraField"
               :extra-field="store.extraField"
               :extra-field-state="store.extraFieldState"
               @update="onExtraFieldUpdate"
             />
-            <ac-tree-filter
+            <ac-table-filter
               v-show="store.status.sidebar==='filter'"
               ref="filter"
               :rawdata="data"
@@ -135,12 +159,18 @@
           <span style="width:1px; background:gray; margin-right:2px;pointer-events: none;" />
         </div>
         <div :class="`${prefixCls}-content`">
-          <div v-for="(pdata,index) in pageStrings" :key="index" :class="`${prefixCls}-print-line`">
-            <span
-              :class="`${prefixCls}-print-index`"
-              :style="{width:`${digital}rem`,'flex-shrink':0}"
-            >{{ index+status.page.start }}</span>
-            <pre :class="`${prefixCls}-print-data`">{{ pdata }}</pre>
+          <div :class="`${prefixCls}-list-content`" v-show="store.status.mode==='list'">
+            <div v-for="(pdata,index) in pageStrings" :key="index" :class="`${prefixCls}-print-line`">
+              <span
+                :class="`${prefixCls}-print-index`"
+                :style="{width:`${digital}rem`,'flex-shrink':0}"
+              >{{ index+status.page.start }}</span>
+              <pre :class="`${prefixCls}-print-data`">{{ pdata }}</pre>
+            </div>
+          </div>
+          <div :class="`${prefixCls}-table-content`" v-show="store.status.mode==='table'">
+          </div>
+          <div :class="`${prefixCls}-fold-content`" v-show="store.status.mode==='fold'">
           </div>
         </div>
       </template>
@@ -163,10 +193,10 @@
 const prefixCls = 'ac-table'
 import {JsonAnalyser} from '../utils/jsonAnalyser.js'
 import { openDB, deleteDB, wrap, unwrap } from 'idb'
-import acTree from './ac-tree'
-import acTreeProjection from './ac-tree-projection'
-import acTreeExtraField from './ac-tree-extra-field'
-import acTreeFilter from './ac-tree-filter'
+import acStruct from './ac-struct'
+import acTableProjection from './ac-table-projection'
+import acTableExtraField from './ac-table-extra-field'
+import acTableFilter from './ac-table-filter'
 import icons from '../icons/icons.vue'
 
 /* TODO:
@@ -178,14 +208,17 @@ import icons from '../icons/icons.vue'
 
 export default {
   name: 'ac-table',
-  components: {acTree, acTreeProjection, acTreeExtraField, acTreeFilter, icons},
+  components: {acStruct, acTableProjection, acTableExtraField, acTableFilter, icons},
   props: {
     data: { type: Array, default () { return [] } },
     configs: { type: Object, default: null },
-    structs: { type: Object, default: null },
-    extraFields: { type: Object, default: null },
     filters: { type: Object, default: null },
+    structs: { type: Object, default: null },
     projections: { type: Object, default: null },
+    extraFields: { type: Object, default: null },
+    tableStructs: { type: Object, default: null },
+    tableProjections: { type: Object, default: null },
+    tableExtraFields: { type: Object, default: null },
     uid: { type: String, default () { return (new Date()).toISOString() }},
   },
   data () {
@@ -196,7 +229,7 @@ export default {
       analyser: null,
       filteredData: [],
       sortedData: [],
-      projectedData: {},
+      projectedData: {}, // in rows
       pageData: [],
       projectedStrings: [],
       pageStrings: [],
@@ -220,6 +253,7 @@ export default {
         },
         configs: {},
         status: {
+          mode: 'list',
           sidebar: 'tree',
           page: 0,
           tablePage: 0,
@@ -898,10 +932,17 @@ export default {
         }
       }
     },
-    clickChangeSidebar (event) {
+    clickChangeSidebar (event, type) {
       let target = event.target
-      this.store.status.sidebar = target.getAttribute('name')
-      this.updateDatabase(['status'])
+      let name = target.getAttribute('name')
+      if (name) {
+        if (type === 'sidebar') {
+          this.store.status.sidebar = name
+        } else if (type === 'mode') {
+          this.store.status.mode = name
+        }
+        this.updateDatabase(['status'])
+      }
     },
     statusBarInfo (text, type, timeout) {
       if (!timeout) timeout = 3000
@@ -1217,7 +1258,7 @@ $fontFamily: "'Courier New', Courier, monospace";
   background: #d8ffd7;
   z-index: 99;
 }
-.#{$pre}-toolbar {
+.#{$pre}-show-toolbar {
   padding: 0 0.5rem;
   align-items: center;
   display: flex;
@@ -1287,11 +1328,19 @@ $fontFamily: "'Courier New', Courier, monospace";
 .#{$pre}-sidebar-tab span{
   flex: 1;
   text-align: center;
+  display: inline-flex;
 }
 .#{$pre}-sidebar-tab span:hover{
   background: #d8ffd7;
 }
 .#{$pre}-content {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: overlay;
+  flex: 1;
+}
+.#{$pre}-list-content {
   display: flex;
   flex-direction: column;
   position: relative;

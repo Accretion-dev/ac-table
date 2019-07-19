@@ -15,7 +15,7 @@
       > - </span>
     </div>
     <div :class="`${prefixCls}-content`">
-      <ac-tree-item
+      <ac-struct-item
         ref="tree-root"
         :tree="tree"
         :tree-state="treeState"
@@ -28,11 +28,11 @@
 
 <script>
 const prefixCls = 'ac-table-tree'
-import acTreeItem from './ac-tree-item'
+import acStructItem from './ac-struct-item'
 
 export default {
   name: 'ac-table-tree',
-  components: {acTreeItem},
+  components: {acStructItem},
   props: {
     tree: { type: Object, required: true },
     treeState: { type: Object, required: true },

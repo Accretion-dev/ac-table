@@ -8,7 +8,7 @@
     @dblclick="doubleclick"
     @keydown.stop="keydown"
   >
-    <div>
+    <div :class="`${prefixCls}-treeState-comments`">
       <pre
         v-show="store.treeState.comments&&!loading"
         ref="tree-comments"
@@ -182,8 +182,10 @@ export default {
   props: {
     data: { type: Array, default () { return [] } },
     configs: { type: Object, default: null },
-    struct: { type: Object, default: null },
+    structs: { type: Object, default: null },
+    extraFields: { type: Object, default: null },
     filters: { type: Object, default: null },
+    projections: { type: Object, default: null },
     uid: { type: String, default () { return (new Date()).toISOString() }},
   },
   data () {
@@ -334,8 +336,8 @@ export default {
     let dataChange = (newValue, oldValue) => {
       console.log('data changed!')
     }
-    let structChange = (newValue, oldValue) => {
-      console.log('struct changed!')
+    let structsChange = (newValue, oldValue) => {
+      console.log('structs changed!')
       this.analyser = new JsonAnalyser({tree: value})
     }
     let filtersChange = (newValue, oldValue) => {
@@ -345,7 +347,7 @@ export default {
       this.store.configs = newValue
     }
     this.$watch('data', dataChange)
-    this.$watch('struct',  structChange)
+    this.$watch('structs',  structsChange)
     this.$watch('filters', filtersChange)
     this.$watch('configs', configsChange, {deep: true})
     //this.$watch('store.configs', this.onConfigChange, {deep: true})
@@ -527,9 +529,9 @@ export default {
       if (tree) {
         this.analyser = new JsonAnalyser({tree})
         this.store.tree = tree
-      } else if (this.struct) {
-        this.analyser = new JsonAnalyser({tree: this.struct})
-        this.store.tree = this.struct
+      } else if (this.structs) {
+        this.analyser = new JsonAnalyser({tree: this.structs})
+        this.store.tree = this.structs
       } else {
         this.store.tree = this.genTree(this.data)
       }

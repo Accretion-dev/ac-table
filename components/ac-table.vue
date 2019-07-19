@@ -41,7 +41,7 @@
         </span>
         <icons class="ac-unselectable" style="pointer-events:none;padding: 0 0 0 0.5rem;" name="numbered-list" size="1rem" />
         :
-        <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
+        <span name="struct" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='struct'}">
           <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">S</span>
         </span>
         <span name="projection" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='projection'}">
@@ -52,13 +52,13 @@
         </span>
         <icons class="ac-unselectable" style="pointer-events:none;padding: 0 0 0 0.5rem;" name="table-grid" size="1rem" />
         :
-        <span name="tree" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='tree'}">
+        <span name="table-struct" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='table-struct'}">
           <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">S</span>
         </span>
-        <span name="projection" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='projection'}">
+        <span name="table-projection" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='table-projection'}">
           <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">P</span>
         </span>
-        <span name="extraField" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='extraField'}">
+        <span name="table-extraField" :class="{[`${prefixCls}-sidebar-tab-selected`]:store.status.sidebar==='table-extraField'}">
           <span class="ac-unselectable" style="pointer-events:none; padding: 0 0.5rem;">E</span>
         </span>
       </div>
@@ -120,7 +120,7 @@
         <div v-show="status.showSidebar" ref="sidebar-wrapper" :class="`${prefixCls}-sidebar-wrapper`">
           <div ref="sidebar" :class="`${prefixCls}-sidebar`">
             <ac-struct
-              v-show="store.status.sidebar==='tree'"
+              v-show="store.status.sidebar==='struct'"
               ref="tree"
               :tree="store.tree"
               :tree-state="store.treeState"
@@ -254,7 +254,7 @@ export default {
         configs: {},
         status: {
           mode: 'list',
-          sidebar: 'tree',
+          sidebar: 'struct',
           page: 0,
           tablePage: 0,
         },

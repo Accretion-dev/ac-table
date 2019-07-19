@@ -4,6 +4,7 @@
     tabindex="0"
     @keydown="keydown"
   >
+    <b>Filters</b>
     <div :class="`${prefixCls}-tool-bar`">
       <span
         :class="`${prefixCls}-tools-button`"

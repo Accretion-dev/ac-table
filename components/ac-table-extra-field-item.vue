@@ -58,7 +58,10 @@
       </div>
     </div>
     <div :class="`${this.prefixCls}-display`" v-else>
-      <div :class="{[`${prefixCls}-projection`]: data.status.projection}">
+      <div :class="{
+        [`${prefixCls}-projection`]: data.status.projection||data.status.tableProjection,
+        [`${prefixCls}-double-projection`]: data.status.projection&&data.status.tableProjection,
+      }">
         <span v-if="icon">
           <span v-if="icon.array">
             <span class="ac-unselectable">[</span><icons :name="icon.type" size="0.9em"/><span class="ac-unselectable">]</span>
@@ -291,6 +294,10 @@ export default {
 <style lang="scss">
 $pre: ac-table-extra-field-item;
 .#{$pre}-projection {
+  color: cyan;
+  font-weight: bolder;
+}
+.#{$pre}-double-projection {
   color: green;
   font-weight: bolder;
 }

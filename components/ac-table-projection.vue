@@ -4,6 +4,7 @@
     tabindex="0"
     @keydown="keydown"
   >
+    <b>Projection ({{prefix?prefix:'list'}})</b>
     <ac-table-projection-item v-for="(data, index) of projections"
       :key="getKey(data)"
       :data="data"
@@ -24,6 +25,7 @@ export default {
   props: {
     projections: {type: Array, required: true},
     projectionState: {type: Object, required: true},
+    prefix: { type: String, default: "" },
   },
   data () {
     return {
@@ -46,7 +48,7 @@ export default {
       let child = this.$children.find(_ => _.$vnode.data.key===key)
       if (child) {
         let data = child.data
-        this.$emit('update', {goToOrigin: data})
+        this.$emit('update', {goToOrigin: data, prefix: this.prefix})
       }
     },
     getKey (data) {
@@ -57,7 +59,7 @@ export default {
       if (children) {
         children.changeShow()
       }
-      this.$emit('update', {changeShow: true})
+      this.$emit('update', {changeShow: true, prefix: this.prefix})
     },
     setSelected (key, status) {
       let children = this.$children.find(_ => _.$vnode.data.key===key)
@@ -75,7 +77,7 @@ export default {
         if (!this.projectionState.selected) {
           this.projectionState.selected = this.getKey(this.projections[0])
           this.setSelected(this.projectionState.selected, true)
-          this.$emit('update', {changeSelect: true})
+          this.$emit('update', {changeSelect: true, prefix: this.prefix})
         } else {
           this.setSelected(this.projectionState.selected, false)
           let index = this.projections.findIndex(_ => this.getKey(_)===this.projectionState.selected)
@@ -87,7 +89,7 @@ export default {
           let key = this.getKey(this.projections[index])
           this.projectionState.selected = key
           this.setSelected(this.projectionState.selected, true)
-          this.$emit('update', {changeSelect: true})
+          this.$emit('update', {changeSelect: true, prefix: this.prefix})
         }
       } else { // status is a project element
         let obj = status
@@ -95,7 +97,7 @@ export default {
         let key = this.getKey(obj)
         this.projectionState.selected = key
         this.setSelected(this.projectionState.selected, true)
-        this.$emit('update', {changeSelect: true})
+        this.$emit('update', {changeSelect: true, prefix: this.prefix})
       }
     },
     moveSelect (status) {
@@ -110,7 +112,7 @@ export default {
         }
         let [deleted] = this.projections.splice(oldIndex,1)
         this.projections.splice(newIndex,0,deleted)
-        this.$emit('update', {reorder: true})
+        this.$emit('update', {reorder: true, prefix: this.prefix})
       }
     },
     onupdate (change) {
@@ -125,7 +127,7 @@ export default {
         let {start,end} = change.reorder
         let [deleted] = this.projections.splice(start,1)
         this.projections.splice(end,0,deleted)
-        this.$emit('update', {reorder: true})
+        this.$emit('update', {reorder: true, prefix: this.prefix})
       }
     },
     updateNewline () {
@@ -164,6 +166,10 @@ export default {
             event.preventDefault()
             this.updateProNewline()
             break
+          case 'G':
+            event.preventDefault()
+            this.goToOrigin()
+            break
         }
       } else {
         switch (event.key) {
@@ -185,7 +191,7 @@ export default {
             event.preventDefault()
             let children = this.$children.find(_ => _.$vnode.data.key===this.projectionState.selected)
             if (children) {
-              this.$emit('update', {deleteProjection: children.data})
+              this.$emit('update', {deleteProjection: children.data, prefix: this.prefix})
             }
             break
           case 'n':

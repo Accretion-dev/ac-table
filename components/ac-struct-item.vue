@@ -101,7 +101,7 @@
 </template>
 
 <script>
-const prefixCls = 'ac-table-tree-item'
+const prefixCls = 'ac-struct-item'
 import icons from '../icons/icons.vue'
 const typeMap = {
   'string': 'S',
@@ -116,7 +116,7 @@ const typeMap = {
 }
 
 export default {
-  name: 'ac-table-tree-item',
+  name: 'ac-struct-item',
   components: {icons},
   props: {
     tree: { type: Object, required: true },
@@ -358,7 +358,7 @@ export default {
 </script>
 
 <style lang="scss">
-$pre: ac-table-tree-item;
+$pre: ac-struct-item;
 .#{$pre}-projection {
   color: green;
   font-weight: bolder;

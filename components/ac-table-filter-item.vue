@@ -48,7 +48,7 @@
 <script>
 import icons from '../icons/icons.vue'
 const prefixCls = 'ac-table-filter-item'
-import acTreeFilterInput from './ac-table-filter-input'
+import acTableFilterInput from './ac-table-filter-input'
 
 const typeMap = {
   'string': 'S',
@@ -64,7 +64,7 @@ const typeMap = {
 
 export default {
   name: 'ac-table-filter-item',
-  components: {acTreeFilterInput},
+  components: {acTableFilterInput},
   props: {
     tree: {type: Object, required: true},
     data: {type: Object, required: true},

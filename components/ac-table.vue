@@ -1233,6 +1233,7 @@ export default {
       if (this.store.config.global.doPrintEachPage) { // do print for each page
         this.projectedData = {}
         this.projectedStrings = []
+        this.onPageChange(this.store.status.page)
       } else {  // do print once for all
         this.doProject()
         this.onPageChange(this.store.status.page)

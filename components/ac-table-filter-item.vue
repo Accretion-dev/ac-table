@@ -34,7 +34,7 @@
       </div>
     </div>
     <div :class="`${prefixCls}-display`" v-else>
-      <div :class="{[`${prefixCls}-projection`]: data.status.projection}">
+      <div :class="{[`${prefixCls}-use`]: data.status.use}">
         <b class="ac-unselectable">{{data.name}}</b>
       </div>
       <div style="display:inline-flex;">
@@ -146,6 +146,10 @@ export default {
     select () {
       this.$emit('update', {changeSelect: this.data})
     },
+    changeUse () {
+      this.data.status.use = !this.data.status.use
+      this.$emit('update', {changeUse: this.data})
+    },
     changeSelect (status) {
       this.selected = status
       if (status) {
@@ -212,7 +216,7 @@ export default {
 
 <style lang="scss">
 $pre: ac-table-filter-item;
-.#{$pre}-projection {
+.#{$pre}-use {
   color: green;
   font-weight: bolder;
 }

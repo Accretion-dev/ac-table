@@ -47,11 +47,9 @@ export default {
     value (newValue, oldValue) {
       this.innerValue = newValue
       this.parser.parse(this.value)
-      console.log(this.parser.simpleResult())
     },
     innerValue (newValue, oldValue) {
       this.$emit('input', newValue)
-      console.log('update:', this.parser)
     },
   },
   created() {

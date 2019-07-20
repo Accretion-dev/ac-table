@@ -216,6 +216,8 @@ import acTableProjection from './ac-table-projection'
 import acTableExtraField from './ac-table-extra-field'
 import acTableFilter from './ac-table-filter'
 import icons from '../icons/icons.vue'
+import _parser from 'mongodb-simple-query-syntax/json-filter.js'
+const {parse: jsonParse, Parser: jsonParser} = _parser
 
 /* TODO:
 * filter system
@@ -244,7 +246,7 @@ export default {
   props: {
     data: { type: Array, default () { return [] } },
     config: { type: Object, default: null },
-    filter: { type: Object, default: null },
+    filter: { type: Array, default: null },
     struct: { type: Object, default: null },
     projection: { type: Object, default: null },
     extraField: { type: Object, default: null },
@@ -673,14 +675,6 @@ export default {
       let getValue = (key, value) => {
         if (key === 'config') {
           return this.getConfigs(value)
-        } else if (key === 'tree') {
-          if (value) {
-            this.analyser = new JsonAnalyser({tree:value})
-            this.store.tree = value
-          } else {
-            this.store.tree = this.genTree(this.data)
-          }
-          return this.store.tree
         } else {
           return value
         }
@@ -1104,12 +1098,15 @@ export default {
       if (change.add) {
         this.store.filter.push(change.add)
         this.updateDatabase(['filter'])
+        this.onFilterChange(this.store.filter)
       }
       if (change.modify) {
         this.updateDatabase(['filter'])
+        this.onFilterChange(this.store.filter)
       }
-      if (change.changeShow||change.reorder) {
+      if (change.changeUse||change.reorder) {
         this.updateDatabase(['filter'])
+        this.onFilterChange(this.store.filter)
       }
       if (change.deleted) {
         let index = this.store.filter.findIndex(_ => _===change.deleted)
@@ -1177,7 +1174,6 @@ export default {
     },
     // about filter and projection
     onConfigChange (newValue, oldValue) {
-      console.log('configChange')
       this.updateDatabase(['config'])
       this.onFilterChange(this.store.filter)
     },
@@ -1185,8 +1181,17 @@ export default {
       this.onFilterChange(this.store.filter)
     },
     onFilterChange (newValue, oldValue, init) {
-      let filteredData = this.data
-      this.filteredData = filteredData
+      if (newValue) {
+        let filteredData = this.data
+        for (let filterData of newValue) {
+          if (filterData.status.use) {
+            let content = filterData.content
+            let {filter, error} = jsonParser.getFilter(content)
+            console.log(content, filter, error)
+          }
+        }
+        this.filteredData = filteredData
+      }
       if (!init) {
         this.store.status.page = 0
         this.updateDatabase(['status'])

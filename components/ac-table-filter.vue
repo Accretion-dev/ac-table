@@ -43,54 +43,6 @@
 
 const prefixCls = 'ac-table-filter'
 import acTableFilterItem from './ac-table-filter-item'
-let demo = `
-  @js: 'v.title.split().length<=2'   ||
-  (title: white title: "white"   ||   title: 'Verde green')   ||
-  title:    ||
-  nonexists: 'true'   ||
-  title: /white|(Verde green)/   ||
-  (title|wlen: 3 || title|len: "<=5"  ||  title|wlen: ">=4 <=5")  ||
-  title|js: "v.split().length < 10"  ||
-  ex_date: "in:year:2018 >=01 <=02"  &&  ex_date: "2018-10"  ||
-  ((aS|len: "<=2" && !(aN|len: ">3")) || (value: "<10000"  value: ">1000")) ||
-  some random "string and blanks" ||
-  array: [] ||
-  array: [ ] ||
-  object: {} ||
-  object: { } ||
-  aN: [
-    @null|exists: true
-  ] ||
-  aN: [
-    @array|len: "<3",
-    @array>|every: ">0",
-  ] ||
-  aN: [
-    @array|len: "<3",
-    @array>: ">0"
-  ] ||
-  aN: [
-    @array|len: "<3",
-    @array>|any: ">0"
-  ] ||
-  aSNDAMO@array|len: ">5" ||
-  aSNDAMO@array>|len: ">5" ||
-  aSNDAMO@array>|or: [
-    @number: ">0 <1000",
-    {@date: "in:2018-01"},
-  ] ||
-  aSND|or: [
-    @and: [
-      @null|exists: true,
-    ],
-    {
-      @and: [
-        @array|js: "v.length<3",
-        @array>@number: "<1000",
-      ]
-    }
-  ]
-`
 
 export default {
   name: 'ac-table-filter',
@@ -127,8 +79,7 @@ export default {
       return {
         name: "default",
         uid: (new Date()).toISOString(), // uid
-        content: demo,
-        contentObj: "",
+        content: '',
         status: {
           editing: true,
           selected: false,
@@ -145,6 +96,12 @@ export default {
         },0)
       } else {
         this.$el.focus({ preventScroll: true })
+      }
+    },
+    changeUse () {
+      let children = this.$children.find(_ => _.$vnode.data.key===this.filterState.selected)
+      if (children) {
+        children.changeUse(status)
       }
     },
     setSelected (key, status) {
@@ -263,6 +220,10 @@ export default {
           case 'a':
             event.preventDefault()
             this.clickAdd()
+            break
+          case 'u':
+            event.preventDefault()
+            this.changeUse()
             break
           case 'Enter':
             event.preventDefault()

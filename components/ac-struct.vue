@@ -203,10 +203,10 @@ export default {
       let key = this.prefix?'tableTreeState':'treeState'
       if (move==='up') { // up
         this.selectUP(node)
-        this.$emit('update', {storeUpdate: [key], changeSelect: true})
+        this.$emit('update', {storeUpdate: [key], changeSelect: true, prefix: this.prefix})
       } else if (move==='down') { // down
         this.selectDOWN(node)
-        this.$emit('update', {storeUpdate: [key], changeSelect: true})
+        this.$emit('update', {storeUpdate: [key], changeSelect: true, prefix: this.prefix})
       }
     },
     onupdate (change, value, origin) {

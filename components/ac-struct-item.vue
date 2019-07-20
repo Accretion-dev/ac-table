@@ -175,6 +175,9 @@ export default {
   created () {
     this.nodes[this.tree.path] = this
   },
+  destroyed () {
+    this.nodes[this.tree.path] = undefined
+  },
   beforeCreate: function () {
     this.$options.components.acStructItem = require('./ac-struct-item.vue').default
   },

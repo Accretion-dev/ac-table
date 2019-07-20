@@ -138,7 +138,7 @@ export default {
         this.$parent.$refs.extraField.nodes[path].updateNewline()
       } else {
         let path = obj.path
-        this.$parent.$refs.tree.nodes[path].updateNewline()
+        this.$parent.$refs[this.prefix?'tableStruct':'struct'].nodes[path].updateNewline()
       }
     },
     updateProNewline () {
@@ -146,7 +146,7 @@ export default {
       if (!obj) return
       if (!obj.extraField) {
         let path = obj.path
-        this.$parent.$refs.tree.nodes[path].updateProNewline()
+        this.$parent.$refs[this.prefix?'tableStruct':'struct'].nodes[path].updateProNewline()
       }
     },
     keydown (event) {

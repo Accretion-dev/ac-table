@@ -14,6 +14,11 @@
         ref="tree-comments"
         :class="`${prefixCls}-tree-comments`"
       >{{ store.treeState.comments?store.treeState.comments.comments:"" }}</pre>
+      <pre
+        v-show="store.tableTreeState.comments&&!loading"
+        ref="table-tree-comments"
+        :class="`${prefixCls}-tree-comments`"
+      >{{ store.tableTreeState.comments?store.tableTreeState.comments.comments:"" }}</pre>
       <div :class="`${prefixCls}-masker`" :style="{'z-index': masker?100:-1}" />
     </div>
     <div :class="`${prefixCls}-header`">
@@ -219,6 +224,20 @@ import icons from '../icons/icons.vue'
 * demo
 */
 
+/* Data flow:
+ * data =>
+    filteredData =>
+      sortedData =>
+        projectedData and projectedStrings =>
+          pageStrings
+ * function call flow
+   onConfigChange or onDataChange =>
+     onFilterChange =>
+       onSortChange =>
+         onProjectionChange =>
+           onPageChange
+ */
+
 export default {
   name: 'ac-table',
   components: {acStruct, acTableProjection, acTableExtraField, acTableFilter, icons},
@@ -310,22 +329,21 @@ export default {
         'error': 'red',
       },
       defaultConfigs: {
-        projection: {
-          showUndefined: { type: 'boolean', default: true, },
-          debounceDelay: { type: 'number', default: 500, },
+        global: {
+          doPrintEachPage: { type: 'boolean', default: false, },
         },
         page: {
           pageSize: { type: 'positive', default: 10 },
           tablePageSize: { type: 'positive', default: 100 },
         },
+        projection: {
+          showUndefined: { type: 'boolean', default: true, },
+          debounceDelay: { type: 'number', default: 500, },
+        },
         tableProjection: {
           showUndefined: { type: 'boolean', default: true, },
           debounceDelay: { type: 'number', default: 500, },
         },
-        tablePage: {
-          pageSize: { type: 'positive', default: 10 },
-          tablePageSize: { type: 'positive', default: 100 },
-        }
       },
       validators: {
         boolean: value => {
@@ -382,6 +400,16 @@ export default {
       el.style.setProperty('left', x+"px")
       el.style.setProperty('top', y+"px")
     },
+    'store.tableTreeState.comments' (value) {
+      if (!value) return
+      let el = this.$refs['table-tree-comments']
+      let resizer = this.$refs.resizer
+      if (!resizer || !el) return
+      let y = value.y
+      let x = resizer.getBoundingClientRect().x
+      el.style.setProperty('left', x+"px")
+      el.style.setProperty('top', y+"px")
+    },
   },
   created () {
     // watch for tab change
@@ -426,7 +454,8 @@ export default {
     this.$watch('extraField',  extraFieldChange)
     this.$watch('tableStruct',  tableStructChange)
     this.$watch('tableProjection',  tableProjectionChange)
-    //this.$watch('store.configs', this.onConfigChange, {deep: true})
+
+    this.$watch('store.config', this.onConfigChange, {deep: true})
     this.init()
   },
   mounted () {
@@ -517,6 +546,7 @@ export default {
         }
         this.loading = false
         this.store.treeState.comments = null
+        this.store.tableTreeState.comments = null
       }
     },
     updateDatabase (fields, sync) {
@@ -930,6 +960,7 @@ export default {
         let selected = state.selected
         selected = struct.nodes[selected]
         state.comments = {y:selected.$el.getBoundingClientRect().y, comments: selected.comments}
+        // console.log(JSON.stringify(state), selected.comments, prefix)
         this.timers[prefix?"tableTreeComments":"treeComments"] = setTimeout(() => {
           state.comments = null
         }, this.store.config.projection.debounceDelay)
@@ -1147,6 +1178,7 @@ export default {
     },
     // about filter and projection
     onConfigChange (newValue, oldValue) {
+      console.log('configChange')
       this.updateDatabase(['config'])
       this.onFilterChange(this.store.filter)
     },
@@ -1166,42 +1198,71 @@ export default {
       this.sortedData = this.filteredData
       this.onProjectionChange(this.store.projection)
     },
-    onProjectionChange (newProjects, oldProjects) {
-      console.log({newProjects, oldProjects})
-      // can optimize here
-      if (!oldProjects||newProjects.length!==oldProjects.length) {
-        this.projectedData = {}
-        for (let projection of this.store.projection) {
-          if (!projection.extraField) { // normal fields
-            this.projectedData[projection.path] = this.analyser.getValueByPath(this.sortedData, projection.path)
-          } else { // extra fields
-            if (projection.func) {
-              this.projectedData[projection.path] = this.data.map(_ => projection.func(_))
-            } else {
-              this.projectedData[projection.path] = this.data.map(_ => undefined)
-            }
-          }
-        }
+    doProject(start, end) {
+      let sortedData
+      if (start === undefined) {
+        sortedData = this.sortedData
+      } else {
+        sortedData = this.sortedData.slice(start, end)
       }
+      // for table like
+      //if (!oldProjects||newProjects.length!==oldProjects.length) {
+      //  this.projectedData = {}
+      //  for (let projection of this.store.projection) {
+      //    if (!projection.extraField) { // normal fields
+      //      this.projectedData[projection.path] = this.analyser.getValueByPath(sortedData, projection.path)
+      //    } else { // extra fields
+      //      if (projection.func) {
+      //        this.projectedData[projection.path] = this.data.map(_ => projection.func(_))
+      //      } else {
+      //        this.projectedData[projection.path] = this.data.map(_ => undefined)
+      //      }
+      //    }
+      //  }
+      //}
       // projectionStrings
       if (this.store.projection.length===0) { // no fields
         this.projectedStrings = []
       } else {
-        let result = this.prettyPrint(this.sortedData, this.store.projection, this.store.tree, this.store.config)
+        let result = this.prettyPrint(sortedData, this.store.projection, this.store.tree, this.store.config)
         this.projectedStrings = result
       }
-      this.onPageChange(this.store.status.page)
+    },
+    onProjectionChange (newProjects, oldProjects) {
+      // console.log({newProjects, oldProjects})
+      // can optimize here
+      if (this.store.config.global.doPrintEachPage) { // do print for each page
+        this.projectedData = {}
+        this.projectedStrings = []
+      } else {  // do print once for all
+        this.doProject()
+        this.onPageChange(this.store.status.page)
+      }
     },
     onPageChange (newValue, oldValue) {
-      let pageSize = this.store.config.page.pageSize
-      let length = this.projectedStrings.length
-      let maxPage = Math.floor(length / pageSize)
-      let start = pageSize*newValue
-      let end = pageSize*(newValue+1)-1
-      end = end>=length-1?length-1:end
-      this.pageStrings = this.projectedStrings.slice(start, end+1)
-      this.status.page = {
-        maxPage, length, start, end, page: newValue
+      if (this.store.config.global.doPrintEachPage) { // do print for each page
+        let pageSize = this.store.config.page.pageSize
+        let length = this.sortedData.length
+        let maxPage = Math.floor(length / pageSize)
+        let start = pageSize*newValue
+        let end = pageSize*(newValue+1)-1
+        end = end>=length-1?length-1:end
+        this.doProject(start, end+1)
+        this.pageStrings = this.projectedStrings
+        this.status.page = {
+          maxPage, length, start, end, page: newValue
+        }
+      } else { // do print once for all
+        let pageSize = this.store.config.page.pageSize
+        let length = this.projectedStrings.length
+        let maxPage = Math.floor(length / pageSize)
+        let start = pageSize*newValue
+        let end = pageSize*(newValue+1)-1
+        end = end>=length-1?length-1:end
+        this.pageStrings = this.projectedStrings.slice(start, end+1)
+        this.status.page = {
+          maxPage, length, start, end, page: newValue
+        }
       }
     },
     _prettyPrint (data, tree, level, config) {

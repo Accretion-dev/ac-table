@@ -1101,7 +1101,6 @@ export default {
       }
     },
     onFilterUpdate (change, origin) {
-      console.log('filter update:', change)
       if (change.add) {
         this.store.filter.push(change.add)
         this.updateDatabase(['filter'])

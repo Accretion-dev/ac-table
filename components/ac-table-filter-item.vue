@@ -12,8 +12,8 @@
     @dragstart="dragstart"
     @dragend="dragend"
   >
-    <div :class="`${this.prefixCls}-editing`" v-if="data.status.editing">
-      <div :class="`${this.prefixCls}-form-line`">
+    <div :class="`${prefixCls}-editing`" v-if="data.status.editing">
+      <div :class="`${prefixCls}-form-line`">
         <b> name: </b>
         <ac-input
           ref="name"
@@ -23,7 +23,7 @@
           @report="onreport('content')"
         />
       </div>
-      <div :class="`${this.prefixCls}-form-line`">
+      <div :class="`${prefixCls}-form-line`">
         <ac-table-filter-input
           ref="content"
           v-model="data.content"
@@ -33,7 +33,7 @@
         />
       </div>
     </div>
-    <div :class="`${this.prefixCls}-display`" v-else>
+    <div :class="`${prefixCls}-display`" v-else>
       <div :class="{[`${prefixCls}-projection`]: data.status.projection}">
         <b class="ac-unselectable">{{data.name}}</b>
       </div>

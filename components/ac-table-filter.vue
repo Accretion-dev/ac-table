@@ -12,7 +12,7 @@
       > + </span>
     </div>
     <ac-table-filter-item v-for="(thisdata, index) of filter"
-      :key="thisdata.path"
+      :key="thisdata.name"
       :data="thisdata"
       :index="index"
       :filter-state="filterState"
@@ -43,6 +43,54 @@
 
 const prefixCls = 'ac-table-filter'
 import acTableFilterItem from './ac-table-filter-item'
+let demo = `
+  @js: 'v.title.split().length<=2'   ||
+  (title: white title: "white"   ||   title: 'Verde green')   ||
+  title:    ||
+  nonexists: 'true'   ||
+  title: /white|(Verde green)/   ||
+  (title|wlen: 3 || title|len: "<=5"  ||  title|wlen: ">=4 <=5")  ||
+  title|js: "v.split().length < 10"  ||
+  ex_date: "in:year:2018 >=01 <=02"  &&  ex_date: "2018-10"  ||
+  ((aS|len: "<=2" && !(aN|len: ">3")) || (value: "<10000"  value: ">1000")) ||
+  some random "string and blanks" ||
+  array: [] ||
+  array: [ ] ||
+  object: {} ||
+  object: { } ||
+  aN: [
+    @null|exists: true
+  ] ||
+  aN: [
+    @array|len: "<3",
+    @array>|every: ">0",
+  ] ||
+  aN: [
+    @array|len: "<3",
+    @array>: ">0"
+  ] ||
+  aN: [
+    @array|len: "<3",
+    @array>|any: ">0"
+  ] ||
+  aSNDAMO@array|len: ">5" ||
+  aSNDAMO@array>|len: ">5" ||
+  aSNDAMO@array>|or: [
+    @number: ">0 <1000",
+    {@date: "in:2018-01"},
+  ] ||
+  aSND|or: [
+    @and: [
+      @null|exists: true,
+    ],
+    {
+      @and: [
+        @array|js: "v.length<3",
+        @array>@number: "<1000",
+      ]
+    }
+  ]
+`
 
 export default {
   name: 'ac-table-filter',
@@ -79,7 +127,7 @@ export default {
       return {
         name: "default",
         uid: (new Date()).toISOString(), // uid
-        content: "",
+        content: demo,
         contentObj: "",
         status: {
           editing: true,
@@ -97,22 +145,6 @@ export default {
         },0)
       } else {
         this.$el.focus({ preventScroll: true })
-      }
-    },
-    changeProjection (key, only) {
-      let child = this.$children.find(_ => _.$vnode.data.key===key)
-      if (child) {
-        if (only) {
-          this.$emit('update', {status: {projection: true, only: true}}, child)
-          //child.data.status.projection = true
-        } else {
-          if (child.data.status.projection) {
-            this.$emit('update', {status: {projection: false}}, child)
-          } else {
-            this.$emit('update', {status: {projection: true}}, child)
-          }
-          //child.data.status.projection = !child.data.status.projection
-        }
       }
     },
     setSelected (key, status) {
@@ -134,13 +166,13 @@ export default {
           this.$emit('update', {changeSelect: true})
         } else {
           this.setSelected(this.filterState.selected, false)
-          let index = this.filter.findIndex(_ => _.path===this.filterState.selected)
+          let index = this.filter.findIndex(_ => _.name===this.filterState.selected)
           if (index === -1) {
             index = 0
           } else {
             index = (index + status + this.filter.length)%this.filter.length
           }
-          let key = this.filter[index].path
+          let key = this.filter[index].name
           this.filterState.selected = key
           this.setSelected(this.filterState.selected, true)
           this.$emit('update', {changeSelect: true})
@@ -148,7 +180,7 @@ export default {
       } else { // status is a project element
         let obj = status
         this.setSelected(this.filterState.selected, false)
-        let key = status.path
+        let key = status.name
         this.filterState.selected = key
         this.setSelected(this.filterState.selected, true)
         this.$emit('update', {changeSelect: true})
@@ -157,7 +189,7 @@ export default {
     moveSelect (status) {
       if (this.filter.length<=1) return
       if (this.filterState.selected) {
-        let oldIndex = this.filter.findIndex(_ => _.path===this.filterState.selected)
+        let oldIndex = this.filter.findIndex(_ => _.name===this.filterState.selected)
         let newIndex
         if (oldIndex === -1) {
           return
@@ -177,7 +209,7 @@ export default {
         if (this.filterState.selected) {
           this.setSelected(this.filterState.selected, false)
         }
-        this.filterState.selected = change.changeSelect.path
+        this.filterState.selected = change.changeSelect.name
         this.changeSelect()
       }
       if (change.reorder) {
@@ -193,18 +225,6 @@ export default {
         })
       }
       this.$emit('update', change, origin)
-    },
-    updateNewline () {
-      let obj = this.filter.find(_ => _.path===this.filterState.selected)
-      if (!obj) return
-      let path = obj.path
-      this.nodes[path].updateNewline()
-    },
-    goToProjection () {
-      let children = this.$children.find(_ => _.$vnode.data.key===this.filterState.selected)
-      if (children) {
-        this.$emit('update', {goToProjection: children.data})
-      }
     },
     keydown (event) {
       if (event.shiftKey) {
@@ -240,31 +260,13 @@ export default {
               this.$emit('update', {deleted: children.data})
             }
             break
-          case 'n':
-            event.preventDefault()
-            this.updateNewline()
-            break
           case 'a':
             event.preventDefault()
             this.clickAdd()
             break
-          case 'p':
-            event.preventDefault()
-            // put this function here because nodes is changing
-            this.changeProjection(this.filterState.selected)
-            break
-          case 'o':
-            event.preventDefault()
-            // put this function here because nodes is changing
-            this.changeProjection(this.filterState.selected, true)
-            break
-          case 'g':
-            event.preventDefault()
-            this.goToProjection()
-            break
           case 'Enter':
             event.preventDefault()
-            let child = this.$children.find(_ => _.data.path===this.filterState.selected)
+            let child = this.$children.find(_ => _.data.name===this.filterState.selected)
             if (child) child.dblclick()
             break
         }
